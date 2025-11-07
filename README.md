@@ -391,33 +391,7 @@ MIT License - See LICENSE file for details
 - **NAMASTE Coding**: https://www.ccim.gov.in/
 - **ABHA (Ayushman Bharat Health Account)**: https://abha.abdm.gov.in/
 
----
-
-## 📞 Support
-
-**Issues?** Open a GitHub Issue with:
-- Error message & traceback
-- Steps to reproduce
-- Expected vs actual behavior
-
-**Questions?** Check existing issues or email team.
-
----
-
-## 🏆 Hackathon Submission Checklist
-
-- ✅ Dual NAMC ↔ ICD mapping functionality
-- ✅ FHIR R4 Condition resource generation
-- ✅ Real-time autocomplete interface
-- ✅ WHO ICD-11 API integration
-- ✅ Audit logging for compliance
-- ✅ Multi-system support (Siddha/Ayurveda/Unani)
-- ✅ Swagger API documentation
-- ✅ Production-ready error handling
-- ✅ India EHR Standards alignment
-
----
 
 **Last Updated**: November 2025  
-**Repository**: [Your GitHub URL]  
-**Demo**: [Live link if available]
+**Repository**: https://github.com/VasanthakumarS-VK006/KSSEM-HIO25-103  
+
