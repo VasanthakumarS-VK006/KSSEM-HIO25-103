@@ -1,0 +1,25 @@
+requestBody:
+  required: true
+  content:
+    application/json:   # changed
+      schema:
+        type: object
+        properties:
+          patientId:
+            type: string
+            example: "123456"
+          namcCode:
+            type: string
+            example: "ABB1.1"
+          condition:
+            $ref: '#/components/schemas/Condition'
+          metadata:
+            type: object
+            properties:
+              requestId: { type: string, example: "req-123456789" }
+              requestSource: { type: string, example: "Hospital EMR" }
+              consentId: { type: string, example: "consent-987654321" }
+              requestTimestamp: { type: string, format: date-time }
+            required: [requestId, requestSource]
+        required: [patientId, namcCode, condition, metadata]
+

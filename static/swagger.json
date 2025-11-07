@@ -1,0 +1,232 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "EMR API",
+    "description": "API demo combining FHIR Condition resource (NAMC + ICD-11).",
+    "version": "1.0.0",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:5000/api",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Condition Request",
+      "description": "Create FHIR Condition resources"
+    },
+  ],
+  "paths": {
+    "/convert/post": {
+      "get": {
+        "tags": ["NAMC Convertion"],
+        "summary": "Returns ICD Code",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 10 }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["asc", "desc"] }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/bookRequests" }
+              }
+            }
+          }
+        }
+      },
+
+      "post": {
+        "tags": ["Condition Request"],
+        "summary": "Create a FHIR Condition resource",
+        "description": "Creates a Condition resource with NAMC + ICD-11 codes.",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "schema": { "type": "string", "default": "abha-1294875" }
+          }
+        ],
+        "requestBody": {
+          "description": "Condition resource to create",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Condition" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Condition created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Condition" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OperationOutcome" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Condition": {
+        "type": "object",
+        "properties": {
+          "resourceType": { "type": "string", "example": "Condition" },
+          "id": { "type": "string", "example": "789" },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "versionId": { "type": "string", "example": "1" },
+              "lastUpdated": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2025-09-10T06:48:00+05:30"
+              }
+            }
+          },
+          "identifier": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "system": { "type": "string", "example": "http://abdm.gov.in/ABHA" },
+                "value": { "type": "string", "example": "123456" }
+              }
+            }
+          },
+          "clinicalStatus": {
+            "type": "object",
+            "properties": {
+              "coding": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "system": {
+                      "type": "string",
+                      "example": "http://terminology.hl7.org/CodeSystem/condition-clinical"
+                    },
+                    "code": { "type": "string", "example": "active" }
+                  }
+                }
+              }
+            }
+          },
+          "verificationStatus": {
+            "type": "object",
+            "properties": {
+              "coding": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "system": {
+                      "type": "string",
+                      "example": "http://terminology.hl7.org/CodeSystem/condition-ver-status"
+                    },
+                    "code": { "type": "string", "example": "confirmed" }
+                  }
+                }
+              }
+            }
+          },
+          "code": {
+            "type": "object",
+            "properties": {
+              "coding": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "system": { "type": "string", "example": "https://ndhm.gov.in/fhir/CodeSystem/namc" },
+                    "code": { "type": "string", "example": "AB" },
+                    "display": { "type": "string", "example": "Jaundice" }
+                  }
+                }
+              },
+              "text": { "type": "string", "example": "Jaundice" }
+            }
+          },
+          "subject": {
+            "type": "object",
+            "properties": {
+              "reference": { "type": "string", "example": "Patient/123456" },
+              "identifier": {
+                "type": "object",
+                "properties": {
+                  "system": { "type": "string", "example": "http://abdm.gov.in/ABHA" },
+                  "value": { "type": "string", "example": "123456" }
+                }
+              }
+            }
+          },
+          "onsetDateTime": {
+            "type": "string",
+            "format": "date",
+            "example": "2025-09-10"
+          },
+          "recordedDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2025-09-10T06:48:00+05:30"
+          },
+          "recorder": {
+            "type": "object",
+            "properties": {
+              "reference": { "type": "string", "example": "Practitioner/12345" },
+              "display": { "type": "string", "example": "Dr. Smith" }
+            }
+          }
+        }
+      },
+      "OperationOutcome": {
+        "type": "object",
+        "properties": {
+          "resourceType": { "type": "string", "example": "OperationOutcome" },
+          "issue": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "severity": { "type": "string" },
+                "code": { "type": "string" },
+                "details": { "type": "object" }
+              }
+            }
+          }
+        }
+      },
+    }
+  }
+}
+
