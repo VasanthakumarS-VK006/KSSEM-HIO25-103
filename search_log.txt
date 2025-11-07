@@ -1,0 +1,62 @@
+Timestamp: 2025-09-16 12:01:26 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: FHIR Resource Generated (NAMC: TCC, ICD: ME10.1 ) | Result: 
+{
+      "resourceType": "Condition",
+      "id": "cond-123",
+      "meta": { "...": "..." },
+      "code": {
+        "coding": [
+          {
+            "system": "https://ndhm.gov.in/fhir/CodeSystem/namc",
+            "code": "TCC",
+            "display": "Jaundice of children classfied under aiyam"
+          },
+          {
+            "system": "http://id.who.int/icd11/mms",
+            "code": "ME10.1 ",
+            "display": "Unspecified jaundice"
+          }
+        ]
+      },
+      "subject": { "...": "..." }
+    }
+Timestamp: 2025-09-17 14:57:05 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: z2 -> 'Peripheral Neuritis' | Result: Found 2 result(s) (e.g., '8C0Z')
+Timestamp: 2025-09-17 15:41:38 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: FHIR Resource Generated (NAMC: AB, ICD: ME10.1 ) | Result: 
+{
+      "resourceType": "Condition",
+      "id": "cond-123",
+      "meta": { "...": "..." },
+      "code": {
+        "coding": [
+          {
+            "system": "https://ndhm.gov.in/fhir/CodeSystem/namc",
+            "code": "AB",
+            "display": "Jaundice"
+          },
+          {
+            "system": "http://id.who.int/icd11/mms",
+            "code": "ME10.1 ",
+            "display": "Unspecified jaundice"
+          }
+        ]
+      },
+      "subject": { "...": "..." }
+    }
+Timestamp: 2025-09-18 00:02:36 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'Jaundice' | Result: Found 14 result(s) (e.g., 'ME10.1')
+Timestamp: 2025-09-18 00:02:52 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'pain in right ear' | Result: Found 5 results.
+Timestamp: 2025-09-18 00:15:36 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'Metabolic disorders' | Result: Found 50 result(s) (e.g., '5D2Z')
+Timestamp: 2025-09-18 00:16:35 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'Peripheral Neuritis' | Result: Found 2 result(s) (e.g., '8C0Z')
+Timestamp: 2025-09-18 00:17:00 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'pain in stomach' | Result: Found 5 results.
+Timestamp: 2025-09-18 00:18:18 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'Peripheral Neuritis' | Result: Found 2 result(s) (e.g., '8C0Z')
+Timestamp: 2025-09-18 00:18:52 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'Metabolic disorders' | Result: Found 50 result(s) (e.g., '5D2Z')
+Timestamp: 2025-09-18 00:35:11 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC: 'Unspecified jaundice' | Result: Found 10 fuzzy matches.
+Timestamp: 2025-09-18 00:35:28 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'pain in brain' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:01:45 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'vomit' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:11:17 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'ab' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:11:48 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'ab' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:11:49 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'ab' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:14:07 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'itching in hands' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:16:33 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'hi' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:40:29 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'fever' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:41:26 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'fever' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:43:47 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'pain' | Result: Found 5 results.
+Timestamp: 2025-09-18 01:45:40 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'pain' | Result: Found 5 results.
