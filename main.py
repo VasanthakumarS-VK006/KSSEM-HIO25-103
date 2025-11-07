@@ -1,25 +1,50 @@
 import json
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 
+import certifi
+import jwt
 import requests
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
+from langchain.docstore.document import Document
+from langchain_chroma import Chroma
+# --- LangChain Imports for Free, Local NLP Search ---
+from langchain_huggingface import HuggingFaceEmbeddings
 from thefuzz import process
 
-# Assuming this function exists in an 'extraFunctions.py' file, but it's only used for one endpoint now.
-from extraFunctions import getICDDetailsFromEnglishDefinition
+# Force SSL certificate path
+os.environ['SSL_CERT_FILE'] = certifi.where()
+os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
+os.environ['CURL_CA_BUNDLE'] = certifi.where()
 
+
+
+# --- Fallback for extraFunctions ---
+# This ensures the app runs even if extraFunctions.py is missing,
+# although the NAMC-to-ICD converter will return empty results.
+try:
+    from extraFunctions import getICDDetailsFromEnglishDefinition
+except ImportError:
+    print("Warning: 'extraFunctions.py' not found. The NAMC-to-ICD endpoint will not return ICD codes.")
+    def getICDDetailsFromEnglishDefinition(term, code):
+        return []
+
+with open("private_key.pem", "r") as key_file:
+    PRIVATE_KEY = key_file.read()
+
+
+# =================================================================
+# 1. FLASK APP INITIALIZATION & HELPERS
+# =================================================================
 app = Flask(__name__)
 CORS(app)
 
-# --- Default Codes and Log File ---
 DEFAULT_DOCTOR_CODE = "DR987654"
 DEFAULT_PATIENT_CODE = "PAT123456"
 LOG_FILE_NAME = "search_log.txt"
 
-
-# --- Helper Functions ---
 def log_search_activity(search_term, result_summary):
     """Logs search activity to a text file."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -34,13 +59,13 @@ def log_search_activity(search_term, result_summary):
     except Exception as e:
         print(f"Error writing to log file: {e}")
 
-
 def load_all_namc_data():
-    """Loads and combines concept data from both Siddha and Ayurveda JSON files."""
+    """Loads and combines concept data from Siddha, Ayurveda, and Unani JSON files."""
     all_concepts = []
     systems_to_load = {
         "Siddha": "Data/SiddhaJson.json",
-        "Ayurveda": "Data/AyurvedaJson.json"
+        "Ayurveda": "Data/AyurvedaJson.json",
+        "Unani": "Data/UnaniJson.json"
     }
     for system_name, file_path in systems_to_load.items():
         try:
@@ -48,143 +73,40 @@ def load_all_namc_data():
                 data = json.load(file)
                 concepts = data.get("concept", [])
                 for concept in concepts:
-                    concept['system'] = system_name  # Add system origin to each item
+                    concept['system'] = system_name
                 all_concepts.extend(concepts)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"Warning: Could not load or parse {file_path}. Error: {e}")
+                print(f"✅ Successfully loaded {len(concepts)} concepts from {file_path}")
+        except FileNotFoundError:
+            print(f"⚠️ Warning: The file {file_path} was not found. Skipping.")
+        except json.JSONDecodeError as e:
+            print(f"❌ Error: Could not parse {file_path}. Error: {e}")
     return all_concepts
 
 
-# --- PERFORMANCE FIX: Load all data ONCE at startup ---
-ALL_NAMC_CONCEPTS = load_all_namc_data()
-# --------------------------------------------------------
 
-# --- Swagger UI Setup ---
-SWAGGER_URL = '/swagger'
-API_URL = '/static/swagger.json'
-SWAGGERUI_BLUEPRINT = get_swaggerui_blueprint(SWAGGER_URL, API_URL, config={'app_name': "EMR API"})
-app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
-
-
-@app.route("/static/swagger.json")
-def swagger_spec():
-    spec = {"openapi": "3.0.0", "info": {"title": "EMR API", "version": "1.0"}, "paths": {}}
-    return jsonify(spec)
-
-
-# --- Main Application Routes ---
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-@app.route('/api/suggestions', methods=['GET'])
-def get_suggestions():
-    """Provides real-time search suggestions with system prefixes."""
-    query = request.args.get('q', '').lower()
-    if not query:
-        return jsonify([])
-
-    suggestions = []
-    for item in ALL_NAMC_CONCEPTS:
-        display_text = item.get("display", "")
-        code_text = item.get("code", "")
-        if query in display_text.lower() or query in code_text.lower():
-            system = item.get("system", "NAMC")
-            suggestions.append([
-                code_text,
-                f'{system}: {display_text}',
-                item.get("designation")[0].get("value")
-            ])
-    return jsonify(suggestions[:50])
-
-
-@app.route('/api/suggestions/post', methods=['POST'])
-def get_suggestions_via_post():
-    """Provides real-time search suggestions for the Swagger UI."""
-    query = request.get_json() or {}
-    if "code" not in query or "coding" not in query["code"]:
-        return jsonify({"error": "Missing code.coding in body"}), 400
-    namc_code = query["code"]["coding"][0].get("code", "").lower()
-
-    suggestions = []
-    for item in ALL_NAMC_CONCEPTS:
-        if item.get("code", "").lower().startswith(namc_code):
-            system = item.get("system", "NAMC")
-            suggestions.append({
-                "code": item.get("code"),
-                "display": f'{system}: {item.get("display")}',
-                "designation": item.get("designation")[0].get("value")
-            })
-    return jsonify(suggestions[:20])
-
-
-@app.route("/api/submit", methods=["POST"])
-def submit_term():
-    """Converts a selected NAMC term to its ICD-11 equivalent."""
-    request_data = request.get_json()
-    items = request_data.get("term", "").split(",")
-    namc_code = items[0].strip()
-    # Remove the system prefix for the API call
-    english_term_full = items[1].strip()
-    english_term = english_term_full.split(": ", 1)[-1]
-
-    data = getICDDetailsFromEnglishDefinition(english_term, namc_code)
-    result_summary = f"Found {len(data)} result(s)"
-    if data:
-        result_summary += f" (e.g., '{data[0][0]}')"
-    log_search_activity(f"'{english_term}'", result_summary)
-    return jsonify(data)
-
-
-@app.route('/api/convert/post', methods=['POST'])
-def convert():
-    """Converts a NAMC code to ICD-11 for the Swagger UI."""
-    query = request.get_json() or {}
-    if "code" not in query or "coding" not in query["code"]:
-        return jsonify({"error": "Missing code.coding in body"}), 400
-    namc_code = query["code"]["coding"][0].get("code", "").lower()
-    definition = ""
-    for item in ALL_NAMC_CONCEPTS:
-        if item.get("code", "").lower() == namc_code:
-            definition = item.get("display", "")
-            break
-    data = []
-    if definition:
-        search_term_info = f"{namc_code} -> '{definition}'"
-        data = getICDDetailsFromEnglishDefinition(definition, namc_code)
-        result_summary = f"Found {len(data)} result(s)"
-        if data:
-            result_summary += f" (e.g., '{data[0][0]}')"
-        log_search_activity(search_term_info, result_summary)
-    else:
-        log_search_activity(f"'{namc_code}'", "Failed: No definition found")
-    return jsonify(data)
-
-
-@app.route("/api/returnJson", methods=["POST"])
-def return_json():
-    """Formats the selected NAMC and ICD codes into a FHIR Condition resource."""
+# NOTE: It creates a token and gives it to the frontend
+@app.route("/api/generate-token", methods=["POST"])
+def generate_token():
     data = request.get_json()
-    icd = data.get("icd")
-    namc = data.get("namc")
-    namc_code, namc_display_full = [x.strip() for x in namc.split(',', 1)]
-    icd_code, icd_display = [x.strip() for x in icd.split(',', 1)]
-    # Remove system prefix from the display term for the final JSON
-    namc_display = namc_display_full.split(": ", 1)[-1]
-
-    json_payload = {
-        "resourceType": "Condition", "id": "cond-123", "meta": {"...": "..."},
-        "code": {"coding": [
-            {"system": "https://ndhm.gov.in/fhir/CodeSystem/namc", "code": namc_code, "display": namc_display},
-            {"system": "http://id.who.int/icd11/mms", "code": icd_code, "display": icd_display}
-        ]}, "subject": {"...": "..."}
+    abha_number = data.get("abha_number", "12345678901234")
+    abha_address = data.get("abha_address", "patient@sbx")
+    name = data.get("name", "User")
+    
+    payload = {
+        "iss": "https://sandbox.abdm.gov.in",
+        "sub": abha_number,
+        "aud": "facility",
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(hours=24),
+        "abha_number": abha_number,
+        "abha_address": abha_address,
+        "name": name,
+        "kycStatus": "VERIFIED"
     }
-    activity_description = f"FHIR Resource Generated (NAMC: {namc_code}, ICD: {icd_code})"
-    log_search_activity(activity_description, json.dumps(json_payload, indent=2))
-    return jsonify({"message": "Success, JSON logged."})
-
+    
+    token = jwt.encode(payload, PRIVATE_KEY, algorithm="RS256")
+    
+    return jsonify({"token": token})
 
 @app.route("/api/newToken")
 def new_token():
@@ -212,57 +134,246 @@ def new_token():
         return jsonify({"error": "Invalid response from token service."}), 500
 
 
+
+# --- Load all data ONCE at startup ---
+ALL_NAMC_CONCEPTS = load_all_namc_data()
+
+# =================================================================
+# 2. LANGCHAIN NLP SETUP (with Persistent Storage)
+# =================================================================
+print("\nInitializing LangChain components...")
+
+CHROMA_PERSIST_DIR = "chroma_db_persistent"
+embedding_function = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+vectorstore = None
+retriever = None
+
+# Check if a persistent database already exists
+if os.path.exists(CHROMA_PERSIST_DIR):
+    try:
+        print(f"🧠 Loading existing vector store from '{CHROMA_PERSIST_DIR}'...")
+        vectorstore = Chroma(persist_directory=CHROMA_PERSIST_DIR, embedding_function=embedding_function)
+        print("✅ Vector store loaded successfully from disk.")
+    except Exception as e:
+        print(f"❌ Error loading from existing Chroma directory: {e}. Will attempt to rebuild.")
+        vectorstore = None
+
+# If loading failed or directory doesn't exist, create a new one
+if not vectorstore:
+    print("No valid vector store found. Creating a new one...")
+    if ALL_NAMC_CONCEPTS:
+        # Prepare documents for LangChain
+        docs = [
+            Document(
+                # Embed both the display name and its definition for better semantic context
+                page_content=f"{c.get('display')}: {c.get('designation')[0].get('value')}",
+                metadata={
+                    "code": c.get("code"),
+                    "display": c.get("display"),
+                    "system": c.get("system")
+                }
+            ) for c in ALL_NAMC_CONCEPTS if c.get('designation')
+        ]
+        
+        print(f"⚙️ Creating vectors and saving to disk... (This may take a moment on the very first run)")
+        vectorstore = Chroma.from_documents(
+            documents=docs,
+            embedding=embedding_function,
+            persist_directory=CHROMA_PERSIST_DIR
+        )
+        print(f"✅ New vector store created and saved to '{CHROMA_PERSIST_DIR}'.")
+    else:
+        print("⚠️ CRITICAL: No NAMC data was loaded. Cannot create vector store for NLP search.")
+
+# Create a retriever from the vector store if it exists
+if vectorstore:
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 5}) # Retrieve top 5 results
+    print("✅ NLP semantic search is ready to use.")
+else:
+    retriever = None
+
+# =================================================================
+# 3. API ENDPOINTS
+# =================================================================
+
+# --- Swagger UI Setup ---
+SWAGGER_URL = '/swagger'
+API_URL = '/static/swagger.json'
+SWAGGERUI_BLUEPRINT = get_swaggerui_blueprint(SWAGGER_URL, API_URL, config={'app_name': "EMR API"})
+app.register_blueprint(SWAGGERUI_BLUEPRINT, url_prefix=SWAGGER_URL)
+
+PUBLIC_KEY = open("public_key.pem", "r").read()
+
+@app.route("/static/swagger.json")
+def swagger_spec():
+    spec = {"openapi": "3.0.0", "info": {"title": "EMR API", "version": "1.0"}, "paths": {}}
+    return jsonify(spec)
+
+# --- Main Application Route ---
+@app.route("/")
+def home():
+    return render_template("index2.html")
+
+# --- New LangChain NLP Search Endpoint ---
+@app.route("/api/nlp_search", methods=["POST"])
+def nlp_search():
+    if not retriever:
+        return jsonify({"error": "NLP Search is not available due to a server setup error. Check logs."}), 500
+    
+    data = request.get_json()
+    query = data.get("query")
+    if not query:
+        return jsonify({"error": "Missing 'query' in request body."}), 400
+
+    # Use the retriever to find relevant documents
+    relevant_docs = retriever.invoke(query)
+    
+    # Format results for the frontend
+    results = [{
+        "code": doc.metadata.get("code"),
+        "display": doc.metadata.get("display"),
+        "system": doc.metadata.get("system"),
+        "full_definition": doc.page_content,
+    } for doc in relevant_docs]
+
+    log_search_activity(f"NLP Search: '{query}'", f"Found {len(results)} results.")
+    return jsonify(results)
+
+# --- Original Converter Endpoints (Unchanged) ---
+@app.route('/api/suggestions', methods=['GET'])
+def get_suggestions():
+    """Provides simple autocomplete suggestions for the NAMC-to-ICD converter."""
+
+    auth_header = request.headers.get('Authorization')
+
+    if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid Authorization header"}), 401
+
+    token = auth_header[7:]
+
+    try:
+        payload = jwt.decode(
+            token,
+            PUBLIC_KEY,
+            algorithms=["RS256"],
+            issuer="https://sandbox.abdm.gov.in",
+            audience="facility"
+        )
+        # Check custom claim
+        if payload.get("kycStatus") != "VERIFIED":
+            return jsonify({"error": "KYC not verified"}), 403
+
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Token expired"}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({"error": "Invalid token"}), 401
+
+
+    query = request.args.get('q', '').lower()
+    if not query:
+        return jsonify([])
+    suggestions = []
+    for item in ALL_NAMC_CONCEPTS:
+        if query in item.get("display", "").lower() or query in item.get("code", "").lower():
+            suggestions.append([
+                item.get("code"),
+                f'{item.get("system")}: {item.get("display")}',
+                item.get("designation")[0].get("value")
+            ])
+    return jsonify(suggestions[:50])
+
+@app.route("/api/submit", methods=["POST"])
+def namc_to_icd():
+    """NAMC to ICD conversion endpoint."""
+
+    auth_header = request.headers.get('Authorization')
+    if auth_header:
+        print(auth_header)
+    request_data = request.get_json()
+    items = request_data.get("term", "").split(",")
+    namc_code = items[0].strip()
+    english_term_full = items[1].strip()
+    english_term = english_term_full.split(": ", 1)[-1]
+    
+    data = getICDDetailsFromEnglishDefinition(english_term, namc_code)
+    
+    result_summary = f"Found {len(data)} result(s)"
+    if data:
+        result_summary += f" (e.g., '{data[0][0]}')"
+    log_search_activity(f"NAMC->ICD: '{english_term}'", result_summary)
+    return jsonify(data)
+
 @app.route("/api/ICDtoNAMC")
 def icd_to_namc():
-    """Finds the top 10 NAMC term matches from Siddha and Ayurveda for a given ICD term."""
+    """ICD to NAMC conversion endpoint."""
     query = request.args.get("q")
     if not query:
         return jsonify({"error": "Query parameter 'q' is missing."}), 400
     try:
+        # Extract the descriptive term from the ICD input
         term = query.split(",")[1].strip()
     except IndexError:
         term = query.strip()
-
-    # --- Separate concepts and create choice lists for each system ---
-    siddha_concepts = [c for c in ALL_NAMC_CONCEPTS if c.get("system") == "Siddha"]
-    ayurveda_concepts = [c for c in ALL_NAMC_CONCEPTS if c.get("system") == "Ayurveda"]
-
-    siddha_display_map = {c.get("display"): c for c in siddha_concepts if c.get("display")}
-    ayurveda_display_map = {c.get("display"): c for c in ayurveda_concepts if c.get("display")}
-
-    # --- Get top 10 fuzzy matches for each system ---
-    siddha_matches = process.extract(term, siddha_display_map.keys(), limit=10)
-    ayurveda_matches = process.extract(term, ayurveda_display_map.keys(), limit=10)
-
+    
+    # Use fuzzy string matching to find the best NAMC terms
+    choices = {f"{c.get('system')}: {c.get('display')}": c for c in ALL_NAMC_CONCEPTS}
+    matches = process.extract(term, choices.keys(), limit=10)
+    
     results = []
-    # --- Process and format Siddha matches ---
-    for match_term, score in siddha_matches:
-        concept = siddha_display_map.get(match_term)
-        if concept:
-            results.append({
-                "code": concept.get("code"),
-                "term": f"Siddha: {match_term}",
-                "score": score,
-                "definition": concept.get("designation")[0].get("value")
-            })
-
-    # --- Process and format Ayurveda matches ---
-    for match_term, score in ayurveda_matches:
-        concept = ayurveda_display_map.get(match_term)
-        if concept:
-            results.append({
-                "code": concept.get("code"),
-                "term": f"Ayurveda: {match_term}",
-                "score": score,
-                "definition": concept.get("designation")[0].get("value")
-            })
-            
-    # --- Sort the combined list by score for better presentation ---
-    results.sort(key=lambda x: x['score'], reverse=True)
-            
+    for match_term, score in matches:
+        concept = choices[match_term]
+        results.append({
+            "code": concept.get("code"),
+            "term": match_term,
+            "score": score,
+            "definition": concept.get("designation")[0].get("value")
+        })
+    log_search_activity(f"ICD->NAMC: '{term}'", f"Found {len(results)} fuzzy matches.")
     return jsonify(results)
 
 
+@app.route("/csvUpload", methods=['POST', 'GET'])
+def csvUpload():
+    if request.method == "POST":
+        auth_header = request.headers.get('Authorization')
+
+        if not auth_header or not auth_header.startswith("Bearer "):
+                return jsonify({"error": "Missing or invalid Authorization header"}), 401
+
+        token = auth_header[7:]
+
+        try:
+            payload = jwt.decode(
+                token,
+                PUBLIC_KEY,
+                algorithms=["RS256"],
+                issuer="https://sandbox.abdm.gov.in",
+                audience="facility"
+            )
+            # Check custom claim
+            if payload.get("kycStatus") != "VERIFIED":
+                return jsonify({"error": "KYC not verified"}), 403
+
+
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # After the token validation is valid
+        if 'csv_file' in request.files:
+            file = request.files['csv_file']
+            hfr_id = request.form.get("hfr_id", "IN1234534343")
+            filename = os.path.join("Data", hfr_id + ".csv")
+            file.save(filename)
+            print("received")
+            return jsonify({"message" : "success"})
+
+    
+
+# =================================================================
+# 4. RUN THE APPLICATION
+# =================================================================
 if __name__ == "__main__":
     app.run(debug=True)
-
