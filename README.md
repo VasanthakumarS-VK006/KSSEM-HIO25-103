@@ -419,5 +419,5 @@ MIT License - See LICENSE file for details
 ---
 
 **Last Updated**: November 2025  
-**Repository**: [Your GitHub URL]  
-**Demo**: [Live link if available]
+**Repository**: https://github.com/VasanthakumarS-VK006/KSSEM-HIO25-103  
+
