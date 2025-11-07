@@ -3,199 +3,207 @@
 
 <head>
 	<meta charset="UTF-8">
-	<title>Autocomplete Search</title>
+	<title>NAMC-ICD Converter & NLP Search</title>
+
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.css">
 	<style>
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+		}
+
+		.converter-row {
+			margin-bottom: 2rem;
+			border-bottom: 1px solid #dee2e6;
+			padding-bottom: 2rem;
+		}
+
+		/* Styles for the original autocomplete converters */
 		.autocomplete-container {
-			margin: 50px;
 			position: relative;
-			width: 300px;
-			display: flex;
-			align-items: center;
-			gap: 10px;
 		}
 
-		.search-input,
-		#result-input {
-			width: 100%;
-			padding: 8px;
-			font-size: 16px;
-			border: 2px solid #007bff;
-			border-radius: 6px;
-			/* rounded corners */
-			outline: none;
-			/* remove default focus glow */
-			transition: border-color 0.3s ease;
-		}
-
-		.suggestions,
-		#result {
+		.suggestions {
+			display: none;
 			position: absolute;
 			top: 100%;
 			width: 100%;
 			border: 1px solid #ccc;
-			max-height: 200px;
+			max-height: 250px;
 			overflow-y: auto;
 			background: white;
-			display: none;
-			z-index: 10;
-			/* Ensure dropdowns appear above other elements */
+			z-index: 1000;
+			list-style: none;
+			/* Remove bullet points */
+			padding: 0;
+			margin: 0;
 		}
 
-		.suggestion-item,
-		.result-item {
-			padding: 8px;
+		.suggestion-item {
+			padding: 10px;
 			cursor: pointer;
 		}
 
-		.suggestion-item:hover,
-		.result-item:hover {
+		.suggestion-item:hover {
 			background-color: #f0f0f0;
 		}
 
-		#submit-button {
-			margin: 10px 50px;
+		/* Styling for NLP results cards */
+		#nlp-results-area .card {
+			transition: box-shadow 0.2s ease-in-out;
 		}
 
-
-		/* Target all ECT input boxes */
-		.ctw-input {
-			min-width: 300px;
-			width: 100%;
-			/* set width */
-
-			padding: 10px;
-			/* inner spacing */
-
-			font-size: 16px;
-			/* text size */
-
-			border: 2px solid #007bff;
-			/* blue border */
-
-			border-radius: 6px;
-			/* rounded corners */
-
-			outline: none;
-			/* remove default focus glow */
-
-			transition: border-color 0.3s ease;
-		}
-
-		/* Add focus effect */
-
-		.ctw-input:focus {
-			border-color: #0056b3;
-			/* darker blue when active */
-
-			box-shadow: 0 0 5px rgba(0, 91, 187, 0.5);
-		}
-
-		*/
-		/* Optional: placeholder styling */
-
-		.ctw-input::placeholder {
-			color: #aaa;
-			font-style: italic;
+		#nlp-results-area .card:hover {
+			box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
 		}
 	</style>
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-		integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-		integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-		crossorigin="anonymous"></script>
-
-
-	<link rel="stylesheet" href="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.css">
-	<script src="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.js"></script>
-
 </head>
+
 <body>
-
 	<div class="container-fluid p-5">
-		<div class="row">
+		<h1 class="mb-4">NAMC / ICD-11 Conversion Tool</h1>
+
+		<div class="row align-items-center converter-row">
 			<div class="col">
-
-				<div class="autocomplete-container">
-					<label for="search-input">
-						<h3>NAMC Code: </h3>
-					</label>
-					<input type="text" id="search-input" class="search-input" placeholder="Search..." style="min-width: 350px;">
-					<div id="suggestions" class="suggestions"></div>
-				</div>
-
-			</div>
-
-			<div class="col-2 mt-5 pt-3">
-
-				<button id="submit-button" disabled style="max-width: 100px; max-height: 50px;">Convert</button>
-			</div>
-			<div class="col">
-
-				<div class="autocomplete-container">
-					<label for="result-input">
-						<h3>ICD Code: </h3>
-					</label>
-					<input type="text" id="icdCode" class="ctw-input" autocomplete="off" data-ctw-ino="1">
+				<label for="search-input" class="form-label">
+					<h3>NAMC Code</h3>
+				</label>
+				<div class="autocomplete-container position-relative">
+					<input type="text" id="search-input" class="form-control"
+						placeholder="Search Siddha/Ayurveda terms...">
+					<ul id="suggestions" class="suggestions list-group"></ul>
 				</div>
 			</div>
-
-			<div class="col-2 mt-5 pt-3">
-
-				<button id="return-button" style="max-width: 100px; max-height: 50px;"
-					onclick="returnJson()">Return</button>
+			<div class="col-auto">
+				<button id="submit-button" class="btn btn-primary mt-5" type="button" disabled>Convert</button>
 			</div>
-
+			<div class="col">
+				<label for="icdCode" class="form-label">
+					<h3>ICD-11 Code</h3>
+				</label>
+				<input type="text" id="icdCode" class="ctw-input form-control" autocomplete="off" data-ctw-ino="1"
+					placeholder="Result appears here...">
+			</div>
 		</div>
-
-		<div class="row" style="left: 50%;" id="icdResults">
-			<div class="ctw-window" data-ctw-ino="1"></div>
-		</div>
-
-
-
-		<!-- NOTE: This is the second row for converting ICD to NAMC -->
-		<div class="row">
+		<div class="row converter-row">
 			<div class="col">
-				<div class="autocomplete-container">
-					<label for="result-input">
-						<h3>ICD Code: </h3>
-					</label>
-					<input type="text" id="icdCode2" class="ctw-input" autocomplete="off" data-ctw-ino="2">
-				</div>
-			</div>
-
-			<div class="col-2 mt-5 pt-3">
-				<button id="submit-button2" disabled style="max-width: 100px; max-height: 50px; margin-top: 8px;">Convert</button>
-			</div>
-
-
-			<div class="col">
-				<div class="autocomplete-container">
-					<label for="search-input">
-						<h3>NAMC Code: </h3>
-					</label>
-					<input type="text" id="search-input2" class="search-input" placeholder="Search..." style="min-width: 350px;">
-					<div id="suggestions2" class="suggestions"></div>
-				</div>
-			</div>
-
-			<div class="col-2 mt-5 pt-3">
-				<button id="return-button2" style="max-width: 100px; max-height: 50px; margin-left: 50px; margin-top: 8px;"
-					onclick="returnJsonn()">Return</button>
+				<div class="ctw-window" data-ctw-ino="1"></div>
 			</div>
 		</div>
 
-		<div class="row" style="left: 50%;" id="icdResults2">
-			<div class="ctw-window" data-ctw-ino="2"></div>
+		<div class="row align-items-center converter-row">
+			<div class="col">
+				<label for="icdCode2" class="form-label">
+					<h3>ICD-11 Code</h3>
+				</label>
+				<input type="text" id="icdCode2" class="ctw-input form-control" autocomplete="off" data-ctw-ino="2"
+					placeholder="Enter ICD-11 term or code...">
+			</div>
+			<div class="col-auto">
+				<button id="submit-button2" class="btn btn-primary mt-5" type="button" disabled>Convert</button>
+			</div>
+			<div class="col">
+				<label for="search-input2" class="form-label">
+					<h3>NAMC Code</h3>
+				</label>
+				<div class="autocomplete-container position-relative">
+					<input type="text" id="search-input2" class="form-control" placeholder="NAMC results appear here..."
+						readonly>
+					<ul id="suggestions2" class="suggestions list-group"></ul>
+				</div>
+			</div>
+		</div>
+		<div class="row converter-row">
+			<div class="col">
+				<div class="ctw-window" data-ctw-ino="2"></div>
+			</div>
 		</div>
 
-		<!-- <div class="row"> -->
-		<!-- 		<input type="file" name="csv_file"> -->
-		<!-- 	</div> -->
-	</div>
+		<div class="row mt-5 pt-4">
+			<div class="col">
+				<h3>NLP Clinical Notes Search</h3>
+				<p class="text-muted">
+					Enter a clinical description to find the most relevant concepts from Siddha, Ayurveda, and Unani
+					systems.
+				</p>
+				<div class="mb-3">
+					<textarea id="nlp-search-input" class="form-control" rows="4"
+						placeholder="e.g., patient has ringing in ears and feels dizzy..."></textarea>
+				</div>
+				<button id="nlp-search-button" class="btn btn-success" type="button">
+					<span id="nlp-search-spinner" class="spinner-border spinner-border-sm d-none" role="status"
+						aria-hidden="true"></span>
+					Search with NLP
+				</button>
+			</div>
+		</div>
 
-		<script src="../static/index.js" defer></script>
-		<script src="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.js"></script>
+		<div class="row mt-4">
+			<div class="col" id="nlp-results-area">
+			</div>
+		</div>
+
+
+
+        <!-- CSV File Upload Section -->
+        <div class="row mt-5 pt-4 converter-row">
+            <div class="col">
+                <h3>CSV File Upload</h3>
+                <p class="text-muted">
+                    Upload a CSV file containing medical codes for batch conversion. Supported formats: NAMC codes or clinical descriptions.
+                </p>
+                
+                <!-- File Upload Area -->
+                <div id="csv-upload-area" class="csv-upload-zone mb-3">
+                    <div class="upload-content">
+                        <i class="bi bi-cloud-arrow-up fs-1 text-muted mb-3"></i>
+                        <h5>Choose CSV File</h5>
+                        <p class="text-muted">or drag and drop</p>
+                        <small class="text-muted">CSV files only, max 10MB</small>
+                    </div>
+                    <input type="file" id="csv-file-input" class="d-none" accept=".csv" />
+                </div>
+
+                <!-- Selected File Display -->
+                <div id="selected-file-info" class="d-none mb-3">
+                    <div class="card">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-file-earmark-text me-2"></i>
+                                <span id="selected-filename"></span>
+                                <small class="text-muted ms-2" id="file-size"></small>
+                            </div>
+                            <button id="remove-file" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload Button and Progress -->
+                <div class="mb-3">
+                    <button id="csv-upload-button" class="btn btn-primary" disabled onclick="uploadCSV()">
+                        <span id="csv-upload-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        Upload & Process CSV
+                    </button>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="upload-progress" class="d-none mb-3">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+	<script src="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.js"></script>
+	<script src="./static/index.js"> </script>
+
+
 </body>
 
 </html>
