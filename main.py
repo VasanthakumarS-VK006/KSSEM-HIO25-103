@@ -19,8 +19,14 @@ os.environ['SSL_CERT_FILE'] = certifi.where()
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 os.environ['CURL_CA_BUNDLE'] = certifi.where()
 
+patients_db = {}
+records_db = {}
 
+PRIVATE_KEY = None
+with open("private_key.pem", "r") as key_file:
+    PRIVATE_KEY = key_file.read()
 
+PUBLIC_KEY = open("public_key.pem", "r").read()
 # --- Fallback for extraFunctions ---
 # This ensures the app runs even if extraFunctions.py is missing,
 # although the NAMC-to-ICD converter will return empty results.
@@ -467,6 +473,10 @@ def icd_to_namc():
     log_search_activity(f"ICD->NAMC: '{term}'", f"Found {len(results)} fuzzy matches.")
     return jsonify(results)
 
+
+@app.route("/emr")
+def emr():
+    return render_template("emr.html")
 
 @app.route("/csvUpload", methods=['POST', 'GET'])
 def csvUpload():
