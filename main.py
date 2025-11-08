@@ -2,21 +2,22 @@ import json
 import os
 import re
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
-from thefuzz import process
-import requests
-from werkzeug.utils import secure_filename 
 
 # --- EasyOCR Imports (REVERTED from Tesseract) ---
-import easyocr 
-# ---------------------------------------------------
-
+import easyocr
+import requests
+from flask import Flask, jsonify, render_template, request
+from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
+from langchain.docstore.document import Document
+from langchain_community.vectorstores import Chroma
 # --- LangChain Imports for Free, Local NLP Search ---
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
-from langchain.docstore.document import Document
+from thefuzz import process
+from werkzeug.utils import secure_filename
+
+# ---------------------------------------------------
+
 
 # --- Fallback for extraFunctions ---
 try:
@@ -31,6 +32,12 @@ except ImportError:
 # =================================================================
 app = Flask(__name__)
 CORS(app)
+
+PRIVATE_KEY = None
+with open("private_key.pem", "r") as key_file:
+    PRIVATE_KEY = key_file.read()
+
+PUBLIC_KEY = open("public_key.pem", "r").read()
 
 DEFAULT_DOCTOR_CODE = "DR987654"
 DEFAULT_PATIENT_CODE = "PAT123456"
@@ -229,6 +236,35 @@ def get_icd_details_from_who_api(term):
         return [{"error": f"API request failed: {e}"}]
 
 
+
+patients_db = {}
+records_db = {}
+
+# NOTE: It creates a token and gives it to the frontend
+@app.route("/api/generate-token", methods=["POST"])
+def generate_token():
+    data = request.get_json()
+    abha_number = data.get("abha_number", "12345678901234")
+    abha_address = data.get("abha_address", "patient@sbx")
+    name = data.get("name", "User")
+    
+    payload = {
+        "iss": "https://sandbox.abdm.gov.in",
+        "sub": abha_number,
+        "aud": "facility",
+        "iat": datetime.utcnow(),
+        "exp": datetime.utcnow() + timedelta(hours=24),
+        "abha_number": abha_number,
+        "abha_address": abha_address,
+        "name": name,
+        "kycStatus": "VERIFIED"
+    }
+    
+    token = jwt.encode(payload, PRIVATE_KEY, algorithm="RS256")
+    
+    return jsonify({"token": token})
+
+
 # --- Token endpoint (for client-side calls) ---
 @app.route("/api/newToken")
 def new_token():
@@ -254,6 +290,156 @@ def new_token():
     except (KeyError, json.JSONDecodeError):
         print("Unexpected response from WHO server: 'access_token' not found or invalid JSON.")
         return jsonify({"error": "Invalid response from token service."}), 500
+
+
+
+@app.route('/register', methods=['POST'])
+def register_patient():
+    """
+    Register a patient with ABHA number
+    
+    curl -X POST http://localhost:5000/register \
+      -H "Content-Type: application/json" \
+      -d '{"abha": "12345678901234", "name": "John Doe"}'
+    """
+    data = request.get_json()
+    abha = data['abha']
+    name = data['name']
+    
+    # Store patient
+    patients_db[abha] = {
+        'abha': abha,
+        'name': name,
+        'consent': False  # Not consented yet
+    }
+    
+    return jsonify({
+        'message': 'Patient registered',
+        'abha': abha,
+        'name': name
+    }), 201
+
+
+# ============================================
+# ENDPOINT 2: Give Consent
+# ============================================
+@app.route('/consent', methods=['POST'])
+def give_consent():
+    """
+    Patient gives consent to share data
+    
+    curl -X POST http://localhost:5000/consent \
+      -H "Content-Type: application/json" \
+      -d '{"abha": "12345678901234"}'
+    """
+    data = request.get_json()
+    abha = data['abha']
+    
+    if abha not in patients_db:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    # Activate consent
+    patients_db[abha]['consent'] = True
+    
+    return jsonify({
+        'message': 'Consent given',
+        'abha': abha,
+        'consent_status': 'ACTIVE'
+    }), 200
+
+
+# ============================================
+# ENDPOINT 3: Save Diagnosis (with NAMC + ICD)
+# ============================================
+@app.route('/save-diagnosis', methods=['POST'])
+def save_diagnosis():
+    """
+    Save patient diagnosis with NAMC and ICD-11 codes
+    
+    curl -X POST http://localhost:5000/save-diagnosis \
+      -H "Content-Type: application/json" \
+      -d '{
+        "abha": "12345678901234",
+        "diagnosis": "Jaundice",
+        "namc_code": "ABB1.1",
+        "icd_code": "ME20.1"
+      }'
+    """
+    data = request.get_json()
+    abha = data['abha']
+    
+    # Check if patient exists and has consent
+    if abha not in patients_db:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    if not patients_db[abha]['consent']:
+        return jsonify({'error': 'No consent given'}), 403
+    
+    # Save record
+    record = {
+        'diagnosis': data['diagnosis'],
+        'namc_code': data['namc_code'],
+        'icd_code': data['icd_code'],
+        'date': datetime.now().isoformat()
+    }
+    
+    if abha not in records_db:
+        records_db[abha] = []
+    
+    records_db[abha].append(record)
+    
+    return jsonify({
+        'message': 'Diagnosis saved',
+        'namc': data['namc_code'],
+        'icd': data['icd_code']
+    }), 201
+
+
+# ============================================
+# ENDPOINT 4: Get Patient Health Data (FHIR)
+# ============================================
+@app.route('/get-health-data', methods=['GET'])
+def get_health_data():
+    """
+    Retrieve patient health data
+    
+    curl -X GET "http://localhost:5000/get-health-data?abha=12345678901234"
+    """
+    abha = request.args.get('abha')
+    
+    # Check if patient exists and has consent
+    if abha not in patients_db:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    if not patients_db[abha]['consent']:
+        return jsonify({'error': 'No consent'}), 403
+    
+    # Get records
+    records = records_db.get(abha, [])
+    
+    # Build simple FHIR-like response
+    response = {
+        'patient': {
+            'id': abha,
+            'name': patients_db[abha]['name']
+        },
+        'diagnoses': records,
+        'total_records': len(records)
+    }
+    
+    return jsonify(response), 200
+
+
+# ============================================
+# ENDPOINT 5: Get All Patients (For Testing)
+# ============================================
+@app.route('/patients', methods=['GET'])
+def get_all_patients():
+    """Just for debugging"""
+    return jsonify(patients_db), 200
+
+
+
     
 # --- EasyOCR Function (REVERTED) ---
 # Initialize EasyOCR reader once globally for efficiency
@@ -636,6 +822,11 @@ def namc_to_icd():
             log_search_activity(f"NAMC->ICD (Flexi): '{english_term_only}'", f"Found {len(data)} flexi results.")
 
     return jsonify({"source": source, "data": data})
+
+@app.route("/emr")
+def emr():
+    return render_template("emr.html")
+
 
 # --- ICD-to-NAMC Endpoint (Map-Only) ---
 @app.route("/api/ICDtoNAMC")
