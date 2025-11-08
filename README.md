@@ -4,15 +4,15 @@ A production-ready web application that bridges traditional Indian medicine (NAM
 
 ## Features
 
-✅ **NAMC-to-ICD & ICD-to-NAMC Bidirectional Mapping** – Instant code translation  
-✅ **NLP Semantic Search** – Find medical codes by clinical description using LangChain  
-✅ **JWT Authentication** – ABDM-compliant token generation and validation (RSA-256)  
-✅ **Patient Management** – ABHA registration, consent tracking, health record storage  
-✅ **FHIR-Compatible Data** – Standards-based health information exchange  
-✅ **Multi-System Support** – Siddha, Ayurveda, and Unani terminology  
-✅ **Search Logging** – Audit trail of all medical code searches  
-✅ **Semantic searching** – Robust search with scoring  
-✅ **WHO API Integration** – Real-time ICD-11 code lookup  
+- **NAMC-to-ICD & ICD-to-NAMC Bidirectional Mapping** – Instant code translation  
+- **NLP Semantic Search** – Find medical codes by clinical description using LangChain  
+- **JWT Authentication** – ABDM-compliant token generation and validation (RSA-256)  
+- **Patient Management** – ABHA registration, consent tracking, health record storage  
+- **FHIR-Compatible Data** – Standards-based health information exchange  
+- **Multi-System Support** – Siddha, Ayurveda, and Unani terminology  
+- **Search Logging** – Audit trail of all medical code searches  
+- **Semantic searching** – Robust search with scoring  
+- **WHO API Integration** – Real-time ICD-11 code lookup  
 
 ---
 
