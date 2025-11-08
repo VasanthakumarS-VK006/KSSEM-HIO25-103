@@ -300,39 +300,5 @@ CORS is enabled via `CORS(app)` in main.py – check that frontend calls match A
 
 ---
 
-## Deployment
 
-### Production Checklist
-- [ ] Replace dummy keys with production RSA keys
-- [ ] Set Flask debug=False in main.py
-- [ ] Use production database instead of in-memory
-- [ ] Enable HTTPS/SSL
-- [ ] Set up proper logging and monitoring
-- [ ] Backup Data/ directory regularly
-- [ ] Run preprocess.py for all NAMC systems
-
-### Gunicorn Deployment
-```bash
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 main:app
-```
-
----
-
-## License & References
-
-- NAMASTE codes: Ministry of AYUSH, India
-- ICD-11: World Health Organization (WHO)
-- ABDM: National Health Authority, India
-- FHIR Standard: HL7 International
-
----
-
-## Support & Contribution
-
-For issues or feature requests, document the problem with:
-1. API endpoint called
-2. Input data
-3. Expected vs. actual output
-4. Error logs from `search_log.txt`
 
