@@ -1,0 +1,32 @@
+# Python Project Dependencies (requirements.txt)
+
+# Flask and related libraries for the web server
+Flask==2.3.3
+Flask-Cors==3.0.10
+Flask-Swagger-UI==4.1.0
+requests==2.31.0
+Werkzeug==2.3.7 
+
+# OCR Library (EasyOCR)
+# Note: EasyOCR relies on PyTorch.
+# For CPU-only, install PyTorch first:
+# pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url https://download.pytorch.org/whl/cpu
+# For GPU, refer to https://pytorch.org/get-started/locally/
+easyocr==1.7.1
+opencv-python-headless==4.8.1.78 # Dependency for EasyOCR (headless for server environments)
+
+# NLP Libraries (LangChain and related embeddings)
+langchain==0.0.350 
+langchain-community==0.0.2 
+langchain-huggingface==0.0.1 
+sentence-transformers==2.2.2 
+chromadb==0.4.18 
+hnswlib==0.7.0 
+tiktoken==0.5.2 
+
+# Fuzzy string matching (used for suggestions)
+thefuzz==0.19.0
+python-Levenshtein==0.23.0 
+
+# General utilities
+Pillow==10.1.0 

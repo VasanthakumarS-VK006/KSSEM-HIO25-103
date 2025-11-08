@@ -1,69 +1,359 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-	<meta charset="UTF-8">
-	<title>NAMC-ICD Converter & NLP Search</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Patient Intake – EMR</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.css">
+  
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --muted: #64748b;
+      --text: #0f172a;
+      --accent: #2563eb;
+      --border: #e2e8f0;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: var(--text); background: var(--bg); }
+    .container { max-width: 1100px; margin: 0 auto; padding: clamp(12px, 2vw, 24px); min-height: 100vh; }
 
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-	<link rel="stylesheet" href="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.css">
-	<style>
-		body {
-			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-		}
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 6px 16px rgba(2, 6, 23, 0.06); }
+    .card-header { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .card-title { margin: 0; font-size: 18px; font-weight: 700; }
+    .card-content { padding: 16px 18px; }
 
-		.converter-row {
-			margin-bottom: 2rem;
-			border-bottom: 1px solid #dee2e6;
-			padding-bottom: 2rem;
-		}
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid #cbd5e1; background: #f1f5f9; color: #0f172a; cursor: pointer; font-weight: 600; }
+    .btn:hover { background: #e2e8f0; }
+    .btn.primary { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+    .btn.primary:hover { filter: brightness(1.05); }
+    .btn.outline { background: #ffffff; color: #0f172a; border-color: #cbd5e1; }
+    .btn.ghost { background: transparent; border-color: transparent; color: #0f172a; }
+    .btn.small { height: 32px; padding: 0 12px; font-size: 13px; }
 
-		/* Styles for the original autocomplete converters */
-		.autocomplete-container {
-			position: relative;
-		}
+    .btn-bar { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
-		.suggestions {
-			display: none;
-			position: absolute;
-			top: 100%;
-			width: 100%;
-			border: 1px solid #ccc;
-			max-height: 250px;
-			overflow-y: auto;
-			background: white;
-			z-index: 1000;
-			list-style: none;
-			/* Remove bullet points */
-			padding: 0;
-			margin: 0;
-		}
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: 1fr; }
+    @media (min-width: 900px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
 
-		.suggestion-item {
-			padding: 10px;
-			cursor: pointer;
-		}
+    /* Form */
+    form { display: grid; gap: 18px; }
+    .fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; background: #ffffff; }
+    .legend { font-weight: 700; margin-bottom: 10px; color: #0f172a; }
 
-		.suggestion-item:hover {
-			background-color: #f0f0f0;
-		}
+    .form-row { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 700px) { .form-row.cols-2 { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1000px) { .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; } }
 
-		/* Styling for NLP results cards */
-		#nlp-results-area .card {
-			transition: box-shadow 0.2s ease-in-out;
-		}
+    .field { display: grid; gap: 6px; }
+    .label { font-size: 13px; color: var(--muted); }
+    .input, .select, .textarea { height: 40px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: #ffffff; color: #0f172a; font-size: 14px; }
+    .textarea { height: auto; min-height: 90px; resize: vertical; }
+    .hint { color: var(--muted); font-size: 12px; }
 
-		#nlp-results-area .card:hover {
-			box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
-		}
-	</style>
+    .footer { display:flex; align-items:center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+    .preview { background: #f8fafc; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; font-size: 12px; color: #0f172a; overflow: auto; max-height: 180px; }
+
+    .pill { display:inline-flex; align-items:center; gap:6px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; color:#334155; background:#f1f5f9; }
+  
+    /* --- LEFT DRAWER STYLES (NEW) --- */
+    .ocr-toggle { position: fixed; left: 8px; top: 50%; transform: translateY(-50%); z-index: 60; background: #ffffff; border: 1px solid var(--border); border-left: none; padding: 10px 8px; border-radius: 0 10px 10px 0; box-shadow: 0 6px 16px rgba(2,6,23,0.06); cursor: pointer; }
+    .ocr-toggle:hover { background: #f8fafc; }
+    .ocr-toggle .triangle { width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #0f172a; display: block; }
+
+    .left-drawer { position: fixed; top: 0; left: 0; height: 100vh; width: min(450px, 35vw); background: #ffffff; border-right: 1px solid var(--border); box-shadow: 8px 0 24px rgba(2,6,23,0.12); transform: translateX(-100%); transition: transform 260ms ease; z-index: 50; display: flex; flex-direction: column; }
+    .left-drawer.open { transform: translateX(0); }
+    .left-drawer-header { display:flex; align-items:center; justify-content: space-between; gap:12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .left-drawer-title { font-weight: 700; font-size: 16px; }
+    .left-drawer-content { padding: 16px; overflow-y: auto; }
+    
+    /* --- RIGHT DRAWER STRUCTURE STYLES (Existing) --- */
+    .peek-toggle { position: fixed; right: 8px; top: 50%; transform: translateY(-50%); z-index: 60; background: #ffffff; border: 1px solid var(--border); border-right: none; padding: 10px 8px; border-radius: 10px 0 0 10px; box-shadow: 0 6px 16px rgba(2,6,23,0.06); cursor: pointer; }
+    .peek-toggle:hover { background: #f8fafc; }
+    .peek-toggle .triangle { width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 9px solid #0f172a; display: block; }
+
+    .side-drawer { position: fixed; top: 0; right: 0; height: 100vh; width: min(800px, 60vw); background: #ffffff; border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(2,6,23,0.12); transform: translateX(100%); transition: transform 260ms ease; z-index: 50; display: flex; flex-direction: column; }
+    .side-drawer.open { transform: translateX(0); }
+    .drawer-header { display:flex; align-items:center; justify-content: space-between; gap:12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .drawer-title { font-weight: 700; font-size: 16px; }
+    .drawer-content { padding: 0; overflow: auto; display: block; }
+    .drawer-content > .container-fluid { padding: 1rem !important; }
+    
+    /* --- INDEX.HTML CONTENT STYLES (for autocomplete and results) --- */
+    .converter-row {
+        margin-bottom: 2rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 2rem;
+    }
+    .autocomplete-container { position: relative; }
+    .suggestions { display: none; position: absolute; top: 100%; width: 100%; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; background: white; z-index: 1000; list-style: none; padding: 0; margin: 0; }
+    .suggestion-item { padding: 10px; cursor: pointer; }
+    .suggestion-item:hover { background-color: #f0f0f0; }
+    .suggestions-header { padding: 10px; font-weight: bold; background-color: #e9ecef; color: #333; border-bottom: 1px solid #ccc; }
+    .suggestion-item-map { padding: 10px; cursor: pointer; background-color: #eeeeee; }
+    .suggestion-item-flexi { padding: 10px; cursor: pointer; background-color: #e7f3ff; }
+    .suggestion-item-fuzzy { padding: 10px; cursor: pointer; background-color: #e6ffed; }
+    .suggestion-item-map:hover, .suggestion-item-flexi:hover, .suggestion-item-fuzzy:hover { background-color: #d1d1d1; }
+    #nlp-results-area .card { transition: box-shadow 0.2s ease-in-out; }
+    #nlp-results-area .card:hover { box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important; }
+
+  </style>
 </head>
-
 <body>
-	<div class="container-fluid p-5">
-		<h1 class="mb-4">NAMC / ICD-11 Conversion Tool</h1>
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <h1 class="card-title">Patient Intake / Registration</h1>
+        <div class="btn-bar">
+          <button type="button" class="btn outline" id="btn-cancel">Cancel</button>
+          <button type="button" class="btn" id="btn-save-draft">Save Draft</button>
+          <button type="submit" form="intakeForm" class="btn primary">Save Patient</button>
+        </div>
+      </div>
+      <div class="card-content">
+        <form id="intakeForm" novalidate>
+          <div class="fieldset">
+            <div class="legend">Identity</div>
+            <div class="form-row cols-3">
+              <div class="field">
+                <label class="label" for="firstName">First name *</label>
+                <input class="input" id="firstName" name="firstName" required />
+              </div>
+              <div class="field">
+                <label class="label" for="lastName">Last name *</label>
+                <input class="input" id="lastName" name="lastName" required />
+              </div>
+              <div class="field">
+                <label class="label" for="mrn">MRN</label>
+                <input class="input" id="mrn" name="mrn" placeholder="Hospital MRN (optional)" />
+              </div>
+            </div>
+            <div class="form-row cols-3">
+              <div class="field">
+                <label class="label" for="dob">Date of birth *</label>
+                <input class="input" id="dob" name="dob" type="date" required />
+              </div>
+              <div class="field">
+                <label class="label" for="age">Age</label>
+                <input class="input" id="age" name="age" type="number" min="0" max="130" placeholder="Auto-calculated from DOB" />
+                <div class="hint">If set, it will override calculated age.</div>
+              </div>
+              <div class="field">
+                <label class="label" for="sex">Sex *</label>
+                <select class="select" id="sex" name="sex" required>
+                  <option value="">Select…</option>
+                  <option>F</option>
+                  <option>M</option>
+                  <option>Other</option>
+                  <option>Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row cols-2">
+              <div class="field">
+                <label class="label" for="phone">Phone</label>
+                <input class="input" id="phone" name="phone" placeholder="+91 …" />
+              </div>
+              <div class="field">
+                <label class="label" for="email">Email</label>
+                <input class="input" id="email" name="email" type="email" placeholder="name@example.com" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label class="label" for="address">Address</label>
+                <textarea class="textarea" id="address" name="address" placeholder="Street, City, State"></textarea>
+              </div>
+            </div>
+          </div>
 
-		<div class="row align-items-center converter-row">
+          <div class="fieldset">
+            <div class="legend">Clinical</div>
+            <div class="form-row cols-3">
+              <div class="field">
+                <label class="label" for="disease">Disease name *</label>
+                <input class="input" id="disease" name="disease" required placeholder="e.g., Type 2 Diabetes Mellitus" />
+              </div>
+              <div class="field">
+                <label class="label" for="namc">NAMC code</label>
+                <input class="input" id="namc" name="namc" placeholder="Local code" />
+                <button type="button" class="btn small" id="btnMapToICD" style="margin-top: 5px;">Map to ICD</button>
+              </div>
+              <div class="field">
+                <label class="label" for="icd">ICD code *</label>
+                <input class="input" id="icd" name="icd" required placeholder="e.g., E11.9" />
+                <button type="button" class="btn small" id="btnReverseMap" style="margin-top: 5px;">Reverse Map</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label class="label" for="notes">Notes</label>
+                <textarea class="textarea" id="notes" name="notes" placeholder="Add clinical notes or context…"></textarea>
+              </div>
+            </div>
+            <div class="form-row cols-3">
+              <div class="field">
+                <label class="label" for="provider">Primary provider</label>
+                <input class="input" id="provider" name="provider" placeholder="Physician name" />
+              </div>
+              <div class="field">
+                <label class="label" for="insurance">Insurance</label>
+                <input class="input" id="insurance" name="insurance" placeholder="Plan / Policy" />
+              </div>
+              <div class="field">
+                <label class="label" for="language">Preferred language</label>
+                <input class="input" id="language" name="language" placeholder="e.g., English" />
+              </div>
+            </div>
+            <div class="hint">Combined Code: <span class="pill" id="combinedCode">—</span></div>
+          </div>
+
+          <div class="footer">
+            <div class="hint">Required fields are marked with *</div>
+            <div class="btn-bar">
+              <button type="reset" class="btn outline">Reset</button>
+              <button type="button" class="btn" id="btn-preview">Preview JSON</button>
+              <button type="submit" class="btn primary">Save Patient</button>
+            </div>
+          </div>
+          <pre class="preview" id="preview" hidden></pre>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('intakeForm');
+    const preview = document.getElementById('preview');
+
+    // Auto-calc age from DOB if empty
+    const dobEl = document.getElementById('dob');
+    const ageEl = document.getElementById('age');
+    function calcAge() {
+      if (!dobEl.value) return;
+      const d = new Date(dobEl.value);
+      if (Number.isNaN(d.getTime())) return;
+      const diff = Date.now() - d.getTime();
+      const age = Math.floor(diff / (365.25 * 24 * 3600 * 1000));
+      if (!ageEl.value) ageEl.value = String(age);
+    }
+    dobEl.addEventListener('change', calcAge);
+
+    // Combined NAMC + ICD code display
+    const namcEl = document.getElementById('namc');
+    const icdEl = document.getElementById('icd');
+    const combinedEl = document.getElementById('combinedCode');
+    function updateCombined() {
+      const parts = [namcEl.value.trim(), icdEl.value.trim()].filter(Boolean);
+      combinedEl.textContent = parts.length ? parts.join(' + ') : '—';
+    }
+    namcEl.addEventListener('input', updateCombined);
+    icdEl.addEventListener('input', updateCombined);
+
+    // Preview JSON
+    document.getElementById('btn-preview').addEventListener('click', () => {
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.combinedCode = [data.namc, data.icd].filter(Boolean).join(' + ');
+      preview.hidden = false;
+      preview.textContent = JSON.stringify(data, null, 2);
+    });
+
+    // Save handlers (demo only)
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+      }
+      const data = Object.fromEntries(new FormData(form).entries());
+      data.combinedCode = [data.namc, data.icd].filter(Boolean).join(' + ');
+      // TODO: replace with fetch('/apis/default/api/patient', { method:'POST', body: JSON.stringify(data) })
+      alert('Saved!\n' + JSON.stringify(data, null, 2));
+    });
+
+    document.getElementById('btn-save-draft').addEventListener('click', () => {
+      const data = Object.fromEntries(new FormData(form).entries());
+      localStorage.setItem('patientDraft', JSON.stringify(data));
+      alert('Draft saved locally.');
+    });
+
+    document.getElementById('btn-cancel').addEventListener('click', () => {
+      if (confirm('Discard changes and leave this page?')) {
+        window.history.back();
+      }
+    });
+
+    // Load draft if present
+    const draft = localStorage.getItem('patientDraft');
+    if (draft) {
+      try {
+        const d = JSON.parse(draft);
+        Object.keys(d).forEach(k => { const el = form.elements[k]; if (el) el.value = d[k]; });
+        updateCombined();
+      } catch {}
+    }
+  </script>
+
+  <button id="ocrToggle" class="ocr-toggle" aria-label="Open OCR Extractor">
+    <span class="triangle"></span>
+  </button>
+
+  <aside id="leftDrawer" class="left-drawer" aria-hidden="true" aria-label="Medical Document OCR Extractor">
+    <div class="left-drawer-header">
+      <div class="row">
+        <span class="left-drawer-title">📄 Medical Document OCR</span>
+      </div>
+      <div class="btn-bar">
+        <button id="btnCloseOcrDrawer" class="btn small">Close</button>
+      </div>
+    </div>
+    <div class="left-drawer-content">
+        <p class="text-muted">Upload an image of a medical report (e.g., lab report) to automatically extract patient and clinical data.</p>
+        
+        <div class="mb-3">
+            <label for="ocr-file-input" class="form-label">Select Image File</label>
+            <input class="form-control" type="file" id="ocr-file-input" accept="image/*">
+        </div>
+        
+        <button id="ocr-submit-button" class="btn btn-primary w-100 mb-3" type="button">
+            <span id="ocr-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+            Process Image
+        </button>
+
+        <div id="ocr-results-display" class="fieldset" style="min-height: 100px;">
+            <div class="legend">Extracted Data</div>
+            <p id="ocr-status-message" class="text-muted small">Awaiting image upload...</p>
+            <pre id="ocr-raw-json" style="max-height: 200px; overflow-y: auto; font-size: 10px;" hidden></pre>
+            <button id="ocr-populate-button" class="btn btn-success btn-sm mt-2 w-100" type="button" disabled>Populate Patient Fields</button>
+        </div>
+    </div>
+  </aside>
+
+  <button id="peekToggle" class="peek-toggle" aria-label="Open NAMC/ICD Converter">
+    <span class="triangle"></span>
+  </button>
+
+  <aside id="drawer" class="side-drawer" aria-hidden="true" aria-label="NAMC/ICD Converter & NLP Search">
+    <div class="drawer-header">
+      <div class="row">
+        <span class="drawer-title">NAMC/ICD Converter & NLP Search</span>
+      </div>
+      <div class="btn-bar">
+        <button id="btnCloseDrawer" class="btn small">Close</button>
+      </div>
+    </div>
+    <div class="drawer-content">
+
+      <div class="container-fluid p-5">
+		<h1 class="mb-4">NAMC / ICD-11 Conversion Tool</h1>
+        <div class="row align-items-center converter-row">
 			<div class="col">
 				<label for="search-input" class="form-label">
 					<h3>NAMC Code</h3>
@@ -81,8 +371,8 @@
 				<label for="icdCode" class="form-label">
 					<h3>ICD-11 Code</h3>
 				</label>
-				<input type="text" id="icdCode" class="ctw-input form-control" autocomplete="off" data-ctw-ino="1"
-					placeholder="Result appears here...">
+                <input type="text" id="icdCode" class="form-control" autocomplete="off"
+					placeholder="Result appears here..." readonly>
 			</div>
 		</div>
 		<div class="row converter-row">
@@ -96,7 +386,7 @@
 				<label for="icdCode2" class="form-label">
 					<h3>ICD-11 Code</h3>
 				</label>
-				<input type="text" id="icdCode2" class="ctw-input form-control" autocomplete="off" data-ctw-ino="2"
+                <input type="text" id="icdCode2" class="ctw-input form-control" autocomplete="off" data-ctw-ino="2"
 					placeholder="Enter ICD-11 term or code...">
 			</div>
 			<div class="col-auto">
@@ -115,7 +405,7 @@
 		</div>
 		<div class="row converter-row">
 			<div class="col">
-				<div class="ctw-window" data-ctw-ino="2"></div>
+                <div class="ctw-window" data-ctw-ino="2"></div>
 			</div>
 		</div>
 
@@ -142,68 +432,188 @@
 			<div class="col" id="nlp-results-area">
 			</div>
 		</div>
-
-
-
-        <!-- CSV File Upload Section -->
-        <div class="row mt-5 pt-4 converter-row">
-            <div class="col">
-                <h3>CSV File Upload</h3>
-                <p class="text-muted">
-                    Upload a CSV file containing medical codes for batch conversion. Supported formats: NAMC codes or clinical descriptions.
-                </p>
-                
-                <!-- File Upload Area -->
-                <div id="csv-upload-area" class="csv-upload-zone mb-3">
-                    <div class="upload-content">
-                        <i class="bi bi-cloud-arrow-up fs-1 text-muted mb-3"></i>
-                        <h5>Choose CSV File</h5>
-                        <p class="text-muted">or drag and drop</p>
-                        <small class="text-muted">CSV files only, max 10MB</small>
-                    </div>
-                    <input type="file" id="csv-file-input" class="d-none" accept=".csv" />
-                </div>
-
-                <!-- Selected File Display -->
-                <div id="selected-file-info" class="d-none mb-3">
-                    <div class="card">
-                        <div class="card-body d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-file-earmark-text me-2"></i>
-                                <span id="selected-filename"></span>
-                                <small class="text-muted ms-2" id="file-size"></small>
-                            </div>
-                            <button id="remove-file" class="btn btn-sm btn-outline-danger">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Upload Button and Progress -->
-                <div class="mb-3">
-                    <button id="csv-upload-button" class="btn btn-primary" disabled onclick="uploadCSV()">
-                        <span id="csv-upload-spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                        Upload & Process CSV
-                    </button>
-                </div>
-
-                <!-- Progress Bar -->
-                <div id="upload-progress" class="d-none mb-3">
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+	</div>
     </div>
+  </aside>
 
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-	<script src="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.js"></script>
-	<script src="./static/index.js"> </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://icdcdn.who.int/embeddedct/icd11ect-1.7.1.js"></script>
+  <script src="./static/index.js"> </script> 
+  
+  <script>
+    // --- RIGHT DRAWER & MAPPER LOGIC (Existing) ---
+    const drawer = document.getElementById('drawer');
+    const peek = document.getElementById('peekToggle');
+    const btnCloseDrawer = document.getElementById('btnCloseDrawer');
+    function openDrawer(){ drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+    function closeDrawer(){ drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
+    peek.addEventListener('click', openDrawer);
+    btnCloseDrawer.addEventListener('click', closeDrawer);
 
+    // NAMC/ICD integration logic for the main patient form (using the /api/ calls)
+    async function _toJSON(url, opts){
+      const r = await fetch(url, { headers:{'Accept':'application/json','Content-Type':'application/json'}, ...opts});
+      if(!r.ok) throw new Error(url+': '+r.status);
+      return r.json();
+    }
+    
+    async function lookupICD(){
+      const namc = (document.getElementById('namc')?.value||'').trim();
+      const disease = (document.getElementById('disease')?.value||'').trim();
+      if(!namc && !disease){ alert('Enter NAMC or Disease name first.'); return; }
+      
+      const term = namc ? `${namc}, ${disease ? 'Any: '+disease : 'Any: term'}` : `, Any: ${disease}`;
+      try {
+        const res = await _toJSON('/api/submit', { method:'POST', body: JSON.stringify({ term }) });
+        if(res && Array.isArray(res.data) && res.data.length){
+          const [icd, disp] = res.data[0];
+          const icdEl = document.getElementById('icd');
+          if(icdEl){ icdEl.value = icd; } 
+          if(typeof updateCombined === 'function') updateCombined();
+          const prev = document.getElementById('preview');
+          if(prev){ prev.hidden = false; prev.textContent = 'Source: '+res.source+'\n'+JSON.stringify(res.data, null, 2); }
+          alert(`Successfully mapped to ICD code: ${icd} (${disp}). Check the preview for details.`);
+        } else { alert('No ICD match found.'); }
+      } catch(e){ alert('Lookup failed: '+e.message); }
+    }
 
-</body>
+    async function reverseLookupNAMC(){
+      const icd = (document.getElementById('icd')?.value||'').trim();
+      if(!icd){ alert('Enter ICD code first.'); return; }
+      try {
+        const res = await _toJSON(`/api/ICDtoNAMC?q=${encodeURIComponent(icd)}`);
+        if(res && Array.isArray(res) && res.length){
+          const [namc, disp] = [res[0].code, res[0].term]; 
+          const namcEl = document.getElementById('namc');
+          if(namcEl){ namcEl.value = namc; } 
+          if(typeof updateCombined === 'function') updateCombined();
+          const prev = document.getElementById('preview');
+          if(prev){ prev.hidden = false; prev.textContent = JSON.stringify(res, null, 2); }
+          alert(`Successfully reverse-mapped to NAMC code: ${namc} (${disp}). Check the preview for details.`);
+        } else { alert('No NAMC match found.'); }
+      } catch(e){ alert('Reverse lookup failed: '+e.message); }
+    }
 
+    document.addEventListener('click', (ev)=>{
+      if(ev.target && ev.target.id === 'btnMapToICD') lookupICD();
+      if(ev.target && ev.target.id === 'btnReverseMap') reverseLookupNAMC();
+    });
+
+    // --- LEFT DRAWER & OCR LOGIC (NEW) ---
+    const leftDrawer = document.getElementById('leftDrawer');
+    const ocrToggle = document.getElementById('ocrToggle');
+    const btnCloseOcrDrawer = document.getElementById('btnCloseOcrDrawer');
+    const ocrFileInput = document.getElementById('ocr-file-input');
+    const ocrSubmitButton = document.getElementById('ocr-submit-button');
+    const ocrSpinner = document.getElementById('ocr-spinner');
+    const ocrStatusMessage = document.getElementById('ocr-status-message');
+    const ocrRawJson = document.getElementById('ocr-raw-json');
+    const ocrPopulateButton = document.getElementById('ocr-populate-button');
+    let extractedOcrData = null; // Store data globally for populating
+
+    // Drawer Open/Close
+    function openOcrDrawer(){ leftDrawer.classList.add('open'); leftDrawer.setAttribute('aria-hidden','false'); }
+    function closeOcrDrawer(){ leftDrawer.classList.remove('open'); leftDrawer.setAttribute('aria-hidden','true'); }
+    ocrToggle.addEventListener('click', openOcrDrawer);
+    btnCloseOcrDrawer.addEventListener('click', closeOcrDrawer);
+
+    // OCR Processing
+    ocrSubmitButton.addEventListener('click', async () => {
+        const file = ocrFileInput.files[0];
+        if (!file) {
+            alert('Please select an image file first.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        ocrSubmitButton.disabled = true;
+        ocrSpinner.classList.remove('d-none');
+        ocrStatusMessage.textContent = 'Processing image with OCR...';
+        ocrRawJson.hidden = true;
+        ocrPopulateButton.disabled = true;
+
+        try {
+            // Note: This assumes you set up the Flask route /api/ocr_upload
+            const response = await fetch('/api/ocr_upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Server error during OCR processing.');
+            }
+
+            extractedOcrData = result;
+            ocrStatusMessage.textContent = '✅ Data Extracted Successfully!';
+            ocrRawJson.textContent = JSON.stringify(result, null, 2);
+            ocrRawJson.hidden = false;
+            ocrPopulateButton.disabled = false;
+            
+        } catch (error) {
+            ocrStatusMessage.textContent = `❌ Error: ${error.message}`;
+            console.error('OCR Upload Error:', error);
+            extractedOcrData = null;
+        } finally {
+            ocrSubmitButton.disabled = false;
+            ocrSpinner.classList.add('d-none');
+        }
+    });
+
+    // Populate Form Fields
+    ocrPopulateButton.addEventListener('click', () => {
+        if (!extractedOcrData) return;
+
+        const info = extractedOcrData["Patient Info"];
+        const testResults = extractedOcrData["Test Results"];
+        const interpretation = extractedOcrData["Interpretation"];
+        const summary = extractedOcrData["Summary"];
+        
+        // Populate Identity Fields
+        if (info.Name) {
+            const nameParts = info.Name.split(' ');
+            document.getElementById('firstName').value = nameParts[0] || '';
+            document.getElementById('lastName').value = nameParts.slice(1).join(' ') || '';
+        }
+        if (info.Age) document.getElementById('age').value = info.Age;
+        if (info.Sex) {
+            const sexEl = document.getElementById('sex');
+            const normalizedSex = info.Sex.toUpperCase().charAt(0);
+            if (['F', 'M'].includes(normalizedSex)) {
+                sexEl.value = normalizedSex;
+            } else {
+                sexEl.value = 'Other';
+            }
+        }
+        
+        // Combine Symptoms/Signs/Results/Summary into Notes field
+        let notesContent = [];
+        if (extractedOcrData.ReportType) notesContent.push(`--- ${extractedOcrData.ReportType} ---`);
+        if (extractedOcrData.Date) notesContent.push(`Report Date: ${extractedOcrData.Date}`);
+        if (info.PreviousHospital) notesContent.push(`Referred From: ${info.PreviousHospital}`);
+        if (info.Symptoms) notesContent.push(`Symptoms: ${info.Symptoms}`);
+        if (info.Signs) notesContent.push(`Signs: ${info.Signs}`);
+
+        if (Object.keys(testResults).length > 0) {
+            notesContent.push("\n--- Test Results ---");
+            for (const [key, value] of Object.entries(testResults)) {
+                notesContent.push(`${key}: ${value}`);
+            }
+        }
+        if (interpretation) notesContent.push(`\nInterpretation: ${interpretation}`);
+        if (summary) notesContent.push(`\nSummary: ${summary}`);
+
+        document.getElementById('notes').value = notesContent.join('\n');
+        
+        alert('Patient details, age, sex, and clinical notes have been populated from OCR data.');
+        
+        // Close the drawer after populating
+        closeOcrDrawer();
+    });
+  </script>
+  
+  </body>
 </html>

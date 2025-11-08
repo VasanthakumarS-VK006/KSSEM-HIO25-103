@@ -60,3 +60,44 @@ Timestamp: 2025-09-18 01:40:29 | DoctorID: DR987654 | PatientID: PAT123456 | Sea
 Timestamp: 2025-09-18 01:41:26 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'fever' | Result: Found 5 results.
 Timestamp: 2025-09-18 01:43:47 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'pain' | Result: Found 5 results.
 Timestamp: 2025-09-18 01:45:40 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'pain' | Result: Found 5 results.
+Timestamp: 2025-11-07 22:39:05 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'Hepatic disease classified under vali humour' | Result: Found 50 result(s) (e.g., 'DB9Z')
+Timestamp: 2025-11-07 22:52:40 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Hepatic disease classified under vali humour' | Result: Found 20 flexi results.
+Timestamp: 2025-11-07 22:52:59 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'It is characterised by irrelevant and irrational talk' | Result: Found 7 flexi results.
+Timestamp: 2025-11-07 22:55:24 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'It is characterised by difficulty to concentrate' | Result: Found 20 flexi results.
+Timestamp: 2025-11-07 23:02:47 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'It is characterised by irrelevant and irrational talk' | Result: Found 7 flexi results.
+Timestamp: 2025-11-07 23:03:15 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'It is characterised by irrelevant and irrational talk' | Result: Found 7 flexi results.
+Timestamp: 2025-11-07 23:33:23 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'It is characterised by irrelevant and irrational talk' | Result: Found 7 result(s) (e.g., '8A06.Z')
+Timestamp: 2025-11-07 23:37:56 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'It is characterised by irrelevant and irrational talk' | Result: Found 7 result(s) (e.g., '8A06.Z')
+Timestamp: 2025-11-07 23:44:37 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'It is characterised by irrelevant and irrational talk' | Result: Found 0 result(s)
+Timestamp: 2025-11-08 00:07:08 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'It is characterised by irrelevant and irrational talk' | Result: Found 0 result(s)
+Timestamp: 2025-11-08 00:09:17 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD: 'It is characterised by irrelevant and irrational talk' | Result: Found 0 result(s)
+Timestamp: 2025-11-08 00:12:58 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'It is characterised by irrelevant and irrational talk' | Result: Found 7 flexi results.
+Timestamp: 2025-11-08 01:58:59 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Metabolic disorders' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 01:59:15 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Jaundice' | Result: Found 14 flexi results.
+Timestamp: 2025-11-08 01:59:49 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Metabolic disorders' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 02:13:49 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Jaundice' | Result: Found 14 flexi results.
+Timestamp: 2025-11-08 02:15:16 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Hepatic disease classified under azhal humour' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 02:15:39 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Map): 'Unani: Ṣar‘' | Result: Found 4 map results.
+Timestamp: 2025-11-08 02:16:00 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Hepatomegaly due to azhal' | Result: Found 4 flexi results.
+Timestamp: 2025-11-08 02:16:53 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Map): 'Unani: Ṣar‘' | Result: Found 4 map results.
+Timestamp: 2025-11-08 02:17:04 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Hepatic disease classified under azhal humour' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 02:32:47 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Fuzzy): 'fever' | Result: Found 10 fuzzy matches.
+Timestamp: 2025-11-08 02:34:21 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Fuzzy): 'fever' | Result: Found 10 fuzzy matches.
+Timestamp: 2025-11-08 02:40:48 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Map): 'fever' | Result: No map results found.
+Timestamp: 2025-11-08 02:42:45 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Map): 'fever' | Result: No map results found.
+Timestamp: 2025-11-08 02:42:52 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Map): 'fever' | Result: No map results found.
+Timestamp: 2025-11-08 02:55:16 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Map): 'fever' | Result: No map results found.
+Timestamp: 2025-11-08 02:55:28 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Map): 'fever' | Result: No map results found.
+Timestamp: 2025-11-08 03:01:33 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Map): 'MG26' | Result: Found 4 map results.
+Timestamp: 2025-11-08 03:01:46 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Hepatomegaly due to vali' | Result: Found 4 flexi results.
+Timestamp: 2025-11-08 07:39:08 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Hepatomegaly due to vali' | Result: Found 4 flexi results.
+Timestamp: 2025-11-08 07:39:34 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: ICD->NAMC (Map): '4A60.0' | Result: Found 2 map results.
+Timestamp: 2025-11-08 07:39:53 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NLP Search: 'fever,headache,' | Result: Found 5 results.
+Timestamp: 2025-11-08 07:40:16 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Internal fever' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 07:41:59 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'term' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 07:43:26 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Map): 'Siddha: Hepatic disease' | Result: Found 20 map results.
+Timestamp: 2025-11-08 07:44:30 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Map): 'Siddha: Metabolic disorders' | Result: Found 20 map results.
+Timestamp: 2025-11-08 07:44:57 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'term' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 08:01:47 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'term' | Result: Found 20 flexi results.
+Timestamp: 2025-11-08 08:09:13 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Map): 'Siddha: Jaundice' | Result: Found 14 map results.
+Timestamp: 2025-11-08 08:27:40 | DoctorID: DR987654 | PatientID: PAT123456 | SearchTerm: NAMC->ICD (Flexi): 'Hepatic disease classified under vali humour' | Result: Found 20 flexi results.

@@ -1,339 +1,100 @@
+# **EMR Assistant & Medical Code Converter**
 
-# NAMC-ICD Medical Code Translator & ABDM Exchange Layer
+**Bridging Traditional Wisdom with Modern Medicine.** This project provides a robust Flask API for Electronic Medical Record (EMR) assistance, combining Optical Character Recognition (OCR), Natural Language Processing (NLP), and advanced Medical Code Mapping to streamline healthcare data management.
 
-A production-ready web application that bridges traditional Indian medicine (NAMC/AYUSH) and modern international medical coding (ICD-11) with JWT authentication, NLP semantic search, and ABDM compliance.
+## **Features At a Glance**
 
-## Features
+* **OCR-Powered EMR Digitization:** Upload scanned medical documents and instantly extract structured patient information, test results, and clinical notes.  
+* **NAMC ↔️ ICD-11 Code Conversion:** Seamlessly convert between National AYUSH Morbidity Codes (NAMC) and WHO ICD-11 codes using a sophisticated ConceptMap and a dynamic WHO Flexi-search fallback.  
+* **Local Semantic Search (NLP):** Leverage cutting-edge HuggingFace embeddings for intelligent, context-aware searching of NAMC definitions, even offline.  
+* **High-Performance & Scalable:** Built with Flask, designed for rapid responses and easy deployment.  
+* **Secure & Logged:** All search activities are logged for auditing and compliance.  
+* **Intuitive Web Interface:** A user-friendly frontend (index.html) to interact with all API functionalities.
 
-✅ **NAMC-to-ICD & ICD-to-NAMC Bidirectional Mapping** – Instant code translation  
-✅ **NLP Semantic Search** – Find medical codes by clinical description using LangChain  
-✅ **JWT Authentication** – ABDM-compliant token generation and validation (RSA-256)  
-✅ **Patient Management** – ABHA registration, consent tracking, health record storage  
-✅ **FHIR-Compatible Data** – Standards-based health information exchange  
-✅ **Multi-System Support** – Siddha, Ayurveda, and Unani terminology  
-✅ **Search Logging** – Audit trail of all medical code searches  
-✅ **Fuzzy & Exact Matching** – Robust search with scoring  
-✅ **WHO API Integration** – Real-time ICD-11 code lookup  
-✅  Uses **EasyOCR**, a lightweight, high-accuracy OCR engine, to extract textual information.
+## **How It Works (The Tech Stack)**
 
----
+### **OCR (Optical Character Recognition)**
 
-## Project Structure
+* **Technology:** **EasyOCR** is utilized for accurate and fast text extraction from uploaded image files (PNG, JPG, JPEG, GIF).  
+* **Workflow:** Image Upload ➡️ EasyOCR Text Extraction ➡️ Regex-based Information Parsing ➡️ Structured JSON Output. It processes documents to pull out key information like patient demographics, symptoms, test results, and more.
 
-```
-project/
-├── main.py                    # Flask web server + API endpoints
-├── agent.py                   # CLI tool for medical code search
-├── extraFunctions.py          # WHO API integration for ICD codes
-├── preprocess.py              # Vector store builder (one-time setup)
-├── search.py                  # Excel-based NAMC search utility
-├── private_key.pem            # RSA private key (token signing)
-├── public_key.pem             # RSA public key (token verification)
-├── Data/
-│   ├── SiddhaJson.json        # Siddha medicine codes
-│   ├── AyurvedaJson.json      # Ayurveda medicine codes
-│   └── UnaniJson.json         # Unani medicine codes
-├── templates/
-│   ├── index2.html            # Web UI for code conversion
-│   └── emr.html               # EMR interface
-├── chroma_db_persistent/      # Vector database (auto-created)
-└── search_log.txt             # Search audit log
-```
+### **Medical Code Conversion**
 
----
+#### **NAMC ➡️ ICD-11**
 
-## Installation
+1. **Local ConceptMap:** A pre-processed FHIR ConceptMap (NAMC\_to\_ICD11\_MultiThreaded\_ConceptMap.json) provides direct, high-confidence mappings for common terms.  
+2. **WHO Flexi-search Fallback:** If a direct mapping isn't found, the API intelligently queries the official **WHO ICD-11 API** using its "Flexi-search" capability to find relevant ICD-11 codes based on the English NAMC term. This ensures comprehensive coverage.
 
-### Prerequisites
-- Python 3.8+
-- pip package manager
+#### **ICD-11 ➡️ NAMC**
 
-### Step 1: Install Dependencies
+* A fast, in-memory **reverse lookup map** built from the ConceptMap allows for quick and accurate conversion from ICD-11 codes back to relevant NAMC terms and their definitions.
 
-```bash
-pip install flask flask-cors flask-swagger-ui langchain langchain-huggingface langchain-chroma chromadb sentence-transformers jwt certifi requests python-Levenshtein thefuzz torch pandas openpyxl
-```
+### **Natural Language Processing (NLP) Search**
 
-### Step 2: Build Vector Database (First Time Only)
+* **Embeddings:** **LangChain** and **HuggingFace Embeddings** (specifically, all-MiniLM-L6-v2) are used to create semantic embeddings of all NAMC concepts.  
+* **Vector Store:** These embeddings are stored and queried in a persistent local vector database (**Chroma Vector Store** in the chroma\_db\_persistent directory).  
+* **Functionality:** This enables powerful semantic search, allowing users to find relevant NAMC concepts even with nuanced or vaguely worded queries.  
+* **Offline Capability:** Once the vector store is built, NLP search functions entirely offline, without relying on external LLM APIs.
 
-```bash
-python preprocess.py
-```
+### **Backend & API**
 
-This creates a semantic search index from NAMC terminology. Takes 2-5 minutes on first run.
+* **Framework:** **Flask** (lightweight Python web framework).  
+* **Dependencies:** Flask-CORS (for frontend integration), requests (for secure external API calls to WHO), and thefuzz / python-Levenshtein (for robust string matching and autocomplete).
 
-### Step 3: Start Flask Server
+## **Getting Started**
 
-```bash
+### **1\. Prerequisites**
+
+* Python 3.8+  
+* pip (Python package installer)
+
+### **2\. Installation**
+
+Clone the repository:
+
+git clone \[your-repo-link\]  
+cd EMR-Assistant
+
+Install Python Dependencies:
+
+pip install \-r requirements.txt
+
+**Important for EasyOCR:** EasyOCR requires torch. If pip install easyocr doesn't automatically set up torch correctly for your system (especially if you need GPU support), you might need to install torch manually first. For most CPU-only setups, use the following command *before* installing requirements.txt:
+
+pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 \--index-url \[https://download.pytorch.org/whl/cpu\](https://download.pytorch.org/whl/cpu)
+
+### **3\. Data Files**
+
+Ensure the Data/ directory contains the following crucial files for the project's functionality:
+
+* SiddhaJson.json  
+* AyurvedaJson.json  
+* UnaniJson.json  
+* NAMC\_to\_ICD11\_MultiThreaded\_ConceptMap.json
+
+### **4\. Run the Application**
+
 python main.py
-```
 
-Server runs at `http://127.0.0.1:5000`
+The server will start on http://127.0.0.1:5000 (or localhost:5000).
 
----
+### **5\. Access the Interface**
 
-## API Endpoints
+* **Web UI:** Open your browser and go to http://127.0.0.1:5000  
+* **API Documentation (Swagger UI):** Explore the API endpoints at http://127.0.0.1:5000/swagger
 
-### 1. **Generate JWT Token**
-```bash
-curl -X POST http://127.0.0.1:5000/api/generate-token \
-  -H "Content-Type: application/json" \
-  -d '{
-    "abha_number": "12345678901234",
-    "abha_address": "patient@sbx",
-    "name": "John Doe"
-  }'
-```
-**Response:** `{"token": "eyJ0eXAiOiJKV1QiLCJhbGc..."}` (24-hour validity)
+## **API Endpoints**
 
----
+| Method | Endpoint | Description |
+| :---- | :---- | :---- |
+| GET | / | Serves the main web interface (index.html). |
+| POST | /api/ocr\_upload | Upload an image for OCR and structured data extraction. |
+| POST | /api/nlp\_search | Perform semantic search on NAMC concepts. |
+| GET | /api/suggestions | Get autocomplete suggestions for NAMC terms. |
+| POST | /api/submit | Convert NAMC code to ICD-11 (using map & flexi-search). |
+| GET | /api/ICDtoNAMC | Convert ICD-11 code to NAMC (using reverse map). |
+| GET | /api/newToken | Acquire a WHO API access token (for client-side ICD calls). |
 
-### 2. **Get NAMC Code Suggestions**
-```bash
-curl -X GET "http://127.0.0.1:5000/api/suggestions?q=jaundice" \
-  -H "Authorization: Bearer <JWT_TOKEN>"
-```
+## **Contributing**
 
-**Response:**
-```json
-[
-  ["ABB1.1", "Siddha: Obstructive Jaundice", "Kambalai"],
-  ["ABB1.2", "Siddha: Hemolytic Jaundice", "Manjal Karuttai"]
-]
-```
-
----
-
-### 3. **Convert NAMC to ICD-11**
-```bash
-curl -X POST http://127.0.0.1:5000/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{"term": "ABB1.1, Siddha: Obstructive Jaundice"}'
-```
-
-**Response:**
-```json
-[
-  ["ME20.1", "Obstructive jaundice"],
-  ["ME20.2", "Non-obstructive jaundice"]
-]
-```
-
----
-
-### 4. **NLP Clinical Description Search**
-```bash
-curl -X POST http://127.0.0.1:5000/api/nlp_search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "patient with yellow skin and itching for 2 weeks"}'
-```
-
-**Response:** Top 5 matching medical codes with confidence scores
-
----
-
-### 5. **Convert ICD-11 to NAMC (Reverse Lookup)**
-```bash
-curl -X GET "http://127.0.0.1:5000/api/ICDtoNAMC?q=ME20.1,Obstructive%20jaundice"
-```
-
-**Response:** Fuzzy-matched NAMC terms with similarity scores
-
----
-
-## ABDM Exchange Layer Endpoints
-
-### Patient Registration
-```bash
-curl -X POST http://127.0.0.1:5000/register \
-  -H "Content-Type: application/json" \
-  -d '{"abha": "12345678901234", "name": "John Doe"}'
-```
-
-### Give Consent
-```bash
-curl -X POST http://127.0.0.1:5000/consent \
-  -H "Content-Type: application/json" \
-  -d '{"abha": "12345678901234"}'
-```
-
-### Save Health Record (NAMC + ICD)
-```bash
-curl -X POST http://127.0.0.1:5000/save-diagnosis \
-  -H "Content-Type: application/json" \
-  -d '{
-    "abha": "12345678901234",
-    "diagnosis": "Jaundice",
-    "namc_code": "ABB1.1",
-    "icd_code": "ME20.1"
-  }'
-```
-
-### Retrieve Patient Health Data (FHIR Format)
-```bash
-curl -X GET "http://127.0.0.1:5000/get-health-data?abha=12345678901234"
-```
-
----
-
-## CLI Usage
-
-### Search by Description (Semantic)
-```bash
-python agent.py "find NAMC patient with fever and body aches"
-```
-
-### Search by Code
-```bash
-python agent.py "find namc ABB1"
-```
-
-### Convert to ICD
-```bash
-python agent.py "convert Siddha: Obstructive Jaundice to icd"
-```
-
-### Convert from ICD
-```bash
-python agent.py "icd to namc ME20.1"
-```
-
----
-
-## Configuration
-
-### Modify Search Parameters (in main.py)
-```python
-# Vector store location
-CHROMA_PERSIST_DIR = "chroma_db_persistent"
-
-# Embedding model
-HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-# Top results returned
-retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
-```
-
-### Adjust JWT Expiry
-```python
-# In generate_token() function
-"exp": datetime.utcnow() + timedelta(hours=24)  # Change 24 to desired hours
-```
-
----
-
-## Data Format
-
-### NAMC/AYUSH Code Structure
-```json
-{
-  "code": "ABB1.1",
-  "display": "Obstructive Jaundice",
-  "system": "Siddha",
-  "designation": [{"value": "Kambalai"}]
-}
-```
-
-### ICD-11 Code Structure (WHO API)
-```json
-{
-  "theCode": "ME20.1",
-  "title": "Obstructive jaundice",
-  "id": "http://id.who.int/icd/entity/..."
-}
-```
-
-### FHIR Condition Resource
-```json
-{
-  "resourceType": "Condition",
-  "id": "cond-uuid",
-  "code": {
-    "coding": [
-      {"system": "https://ndhm.gov.in/fhir/CodeSystem/namc/Siddha", "code": "ABB1.1"},
-      {"system": "http://id.who.int/icd11/mms", "code": "ME20.1"}
-    ]
-  }
-}
-```
-
----
-
-## Authentication
-
-All endpoints require ABDM-compliant JWT tokens with the following claims:
-```
-{
-  "iss": "https://sandbox.abdm.gov.in",
-  "sub": "12345678901234",  // ABHA number
-  "aud": "facility",
-  "kycStatus": "VERIFIED",
-  "exp": 1701085733
-}
-```
-
-Token validation happens in the `get_suggestions` and `csvUpload` endpoints.
-
----
-
-## Performance
-
-- **Search Time:** <100ms for exact matches, <200ms for fuzzy/semantic
-- **Vector Store:** Loads from disk in <2 seconds
-- **Concurrent Users:** Tested up to 50 simultaneous API calls
-
----
-
-## Troubleshooting
-
-### "chroma_db_persistent not found"
-```bash
-python preprocess.py  # Rebuild vector database
-```
-
-### "WHO API authentication failed"
-Check WHO API credentials in `extraFunctions.py` – regenerate if expired
-
-### Token validation errors
-Ensure `public_key.pem` matches `private_key.pem` used for token generation
-
-### CORS errors
-CORS is enabled via `CORS(app)` in main.py – check that frontend calls match API domain
-
----
-
-## Deployment
-
-### Production Checklist
-- [ ] Replace dummy keys with production RSA keys
-- [ ] Set Flask debug=False in main.py
-- [ ] Use production database instead of in-memory
-- [ ] Enable HTTPS/SSL
-- [ ] Set up proper logging and monitoring
-- [ ] Backup Data/ directory regularly
-- [ ] Run preprocess.py for all NAMC systems
-
-### Gunicorn Deployment
-```bash
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 main:app
-```
-
----
-
-## License & References
-
-- NAMASTE codes: Ministry of AYUSH, India
-- ICD-11: World Health Organization (WHO)
-- ABDM: National Health Authority, India
-- FHIR Standard: HL7 International
-
----
-
-## Support & Contribution
-
-For issues or feature requests, document the problem with:
-1. API endpoint called
-2. Input data
-3. Expected vs. actual output
-4. Error logs from `search_log.txt`
+Contributions are welcome\! Feel free to open issues, submit pull requests, or suggest improvements.

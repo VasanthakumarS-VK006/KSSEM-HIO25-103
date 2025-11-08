@@ -1,27 +1,6 @@
 // NOTE: For NAMC to ICD
 // when the return button is clicked it returns the current value in the search box to the backend.
 
-let token = null;
-
-async function initializeToken() {
-	token = await getToken();  // Waits and assigns token
-	console.log("Token initialized:", token);
-}
-
-async function getToken() {
-	const response = await fetch("/api/generate-token", {
-		method: "POST",
-		headers: { 'Authorization': `Bearer ${token}`, "Content-Type": "application/json" },
-		body: JSON.stringify({ abha_number: "12345678901234", abha_address: "patient@sbx", name: "Test User" })
-	});
-	const data = await response.json();
-	return data.token;
-}
-
-initializeToken();
-
-console.log(token)
-
 function returnJson() {
 	const icdValue = document.getElementById("icdCode").value;
 	const namcValue = document.getElementById("search-input").value;
@@ -30,7 +9,7 @@ function returnJson() {
 
 	fetch("/api/returnJson", {
 		method: "POST",
-		headers: { 'Authorization': `Bearer ${token}`, "Content-Type": "application/json" },
+		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(payload)
 	}).catch(error => console.error("Error:", error));
 }
@@ -39,19 +18,18 @@ function returnJson() {
 const searchInput = document.getElementById('search-input');
 const suggestionsContainer = document.getElementById('suggestions');
 const submitButton = document.getElementById('submit-button');
-const resultInput = document.getElementById('result-input');
-const resultDiv = document.getElementById('result');
+const icdCodeInput = document.getElementById('icdCode'); 
 
-let isSuggestionSelected = false; // Track if a suggestion was selected
-let isResultSelected = false; // Track if a suggestion was selected
+let isSuggestionSelected = false; 
+let isResultSelected = false; 
 
 let debounceTimeout;
 
 //NOTE: Checks if any change is made to the NAMC Code search box
 searchInput.addEventListener('input', async () => {
 	const query = searchInput.value.trim();
-	isSuggestionSelected = false; // Reset on new input
-	submitButton.disabled = true; // Disable button until suggestion is selected
+	isSuggestionSelected = false; 
+	submitButton.disabled = true; 
 
 	if (query.length === 0) {
 		suggestionsContainer.style.display = 'none';
@@ -64,7 +42,7 @@ searchInput.addEventListener('input', async () => {
 	debounceTimeout = setTimeout(async () => {
 		try {
 			const url = "/api/suggestions?q=" + encodeURIComponent(query);
-			const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+			const response = await fetch(url);
 			if (!response.ok) throw new Error(`Network response was not ok: ${response.status}`);
 
 			const suggestions = await response.json();
@@ -76,9 +54,9 @@ searchInput.addEventListener('input', async () => {
 				suggestions.forEach(item => {
 					const div = document.createElement('div');
 					div.className = 'suggestion-item';
-					div.textContent = item;
+					div.textContent = item; // item is [code, display, definition]
 					div.addEventListener('click', () => {
-						searchInput.value = item;
+						searchInput.value = item; // Store the full string
 						suggestionsContainer.style.display = 'none';
 						isSuggestionSelected = true;
 						submitButton.disabled = false;
@@ -99,31 +77,126 @@ searchInput.addEventListener('input', async () => {
 
 
 
-//NOTE: Handle submit button click
+// =================================================================
+// (NAMC-to-ICD) Convert Button Logic
+// =================================================================
 submitButton.addEventListener('click', async () => {
 	if (!isSuggestionSelected) {
-		resultDiv.innerHTML = '<p>Please select a suggestion from the list.</p>';
+		alert('Please select a suggestion from the list.');
 		return;
 	}
 
-	const selectedTerm = searchInput.value.trim();
-	if (!selectedTerm) {
-		resultDiv.innerHTML = '<p>No term selected.</p>';
+    // Capture the full selected term, which should be in the format: "CODE, DISPLAY, DEFINITION"
+	const fullSelectedTerm = searchInput.value.trim();
+    // Attempt to extract the NAMC code from the selected term for the main form
+    const searchNamcCode = fullSelectedTerm.split(',')[0].trim(); 
+
+	if (!fullSelectedTerm) {
+		alert('No term selected.');
 		return;
 	}
 
 	try {
+		// Set loading state
+		icdCodeInput.value = "Searching (ConceptMap & Flexisearch)...";
+        suggestionsContainer.innerHTML = '';
+        suggestionsContainer.style.display = 'none';
 
-		terms = selectedTerm.split(",")
-		ECT.Handler.search("1", terms[1]);
+		// 1. Call our new smart /api/submit endpoint
+		const response = await fetch("/api/submit", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ term: fullSelectedTerm })
+		});
 
+		if (!response.ok) {
+			throw new Error(`Server error: ${response.status}`);
+		}
+
+		// Get the new response object
+		const responseData = await response.json(); 
+		const source = responseData.source; // "map", "flexi", or "none"
+		const data = responseData.data;     // [[code, title], ...]
+
+        // NEW: Display results in the main form's preview section
+        const mainFormPreview = document.getElementById('preview');
+        if (mainFormPreview) {
+            mainFormPreview.hidden = false;
+            mainFormPreview.textContent = `Source: ${source} | Matches: ${data.length}\n` + JSON.stringify(data, null, 2);
+        }
+
+		// 2. Check the response
+		if (source === "map" || source === "flexi") {
+			// SUCCESS: We found matches!
+            icdCodeInput.value = "Found " + data.length + " matches. Select one below.";
+            
+            // 3. Display the results with the correct style
+            let cssClass = (source === "map") ? "suggestion-item-map" : "suggestion-item-flexi";
+            
+            // Add header for Flexisearch
+            if (source === "flexi") {
+                const header = document.createElement('div');
+                header.className = 'suggestions-header';
+                header.textContent = 'Flexisearch';
+                suggestionsContainer.appendChild(header);
+            }
+
+			data.forEach(item => { // item is [code, title]
+                const code = item[0];
+                const title = item[1];
+				const div = document.createElement('div');
+				div.className = cssClass; // Apply the correct class
+				div.textContent = `${code}, ${title}`;
+				div.addEventListener('click', () => {
+                    // When clicked, populate the ICD box in the drawer
+					icdCodeInput.value = `${code}, ${title}`;
+					suggestionsContainer.style.display = 'none';
+                    
+                    // NEW: Push ICD code to the main form's ICD field
+                    const mainIcdInput = document.getElementById('icd');
+                    if (mainIcdInput) {
+                        mainIcdInput.value = code;
+                    }
+
+                    // NEW: Push NAMC code to the main form's NAMC field
+                    const mainNamcInput = document.getElementById('namc');
+                    if (mainNamcInput) {
+                        mainNamcInput.value = searchNamcCode;
+                    }
+                    
+                    // Update combined display in main form
+                    if (typeof updateCombined === 'function') updateCombined(); 
+				});
+				suggestionsContainer.appendChild(div);
+			});
+			suggestionsContainer.style.display = 'block'; // Show the list
+		
+		} else {
+			// FAILURE: Server's smart search found nothing (source === "none")
+			icdCodeInput.value = "No ConceptMap or Flexisearch matches found. Opening manual search...";
+            
+            // 4. Fallback to the WHO embedded tool as a last resort
+			const terms = fullSelectedTerm.split(","); 
+			const englishTerm = terms[1].split(": ")[1] || terms[1]; 
+			
+			ECT.Handler.search("1", englishTerm); 
+		}
 
 	} catch (error) {
 		console.error('Error submitting term:', error);
-		resultDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+		icdCodeInput.value = `Error: ${error.message}`;
+        
+        // NEW: Display error in the main form's preview section
+        const mainFormPreview = document.getElementById('preview');
+        if (mainFormPreview) {
+            mainFormPreview.hidden = false;
+            mainFormPreview.textContent = `ERROR during NAMC->ICD conversion: ${error.message}`;
+        }
 	}
 });
-
+// =================================================================
+// END: (NAMC-to-ICD)
+// =================================================================
 
 
 // NOTE: This is for the WHO ECT
@@ -131,7 +204,7 @@ submitButton.addEventListener('click', async () => {
 const mySettings = {
 	apiServerUrl: "https://id.who.int",
 	apiSecured: true,
-	popupMode: true,
+	popupMode: false, // This makes the tool embed in the page
 	searchByCodeOrURI: true,
 	flexisearchAvailable: true
 };
@@ -142,7 +215,7 @@ const myCallbacks = {
 	getNewTokenFunction: async () => {
 		const url = "/api/newToken";
 		try {
-			const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+			const response = await fetch(url);
 			const result = await response.json();
 			return result.token;
 		} catch (e) {
@@ -151,18 +224,51 @@ const myCallbacks = {
 		}
 	},
 
+    // *** UPDATED THIS FUNCTION ***
 	selectedEntityFunction: (selectedEntity, ctwObject) => {
-		// document.getElementById('icdCode').value = `${selectedEntity.code} - ${selectedEntity.title}`;
-
+		
+        // This handles the fallback search for the TOP converter
 		if (selectedEntity.iNo == 1) {
 			ECT.Handler.clear("1");
 			document.getElementById('icdCode').value = `${selectedEntity.code} , ${selectedEntity.title}`;
+            
+            // NEW: Push ICD code to the main form's ICD field
+            const mainIcdInput = document.getElementById('icd');
+            if (mainIcdInput) {
+                mainIcdInput.value = selectedEntity.code;
+            }
+            
+            // Also push the NAMC code used for the search to the main form's NAMC field
+            // The NAMC code is expected to be in searchInput.value
+            const fullSelectedTerm = searchInput.value.trim();
+            const searchNamcCode = fullSelectedTerm.split(',')[0].trim(); 
+            const mainNamcInput = document.getElementById('namc');
+            if (mainNamcInput) {
+                mainNamcInput.value = searchNamcCode;
+            }
+
+            if (typeof updateCombined === 'function') updateCombined(); 
+
+            // NEW: Display selection in the main form's preview section
+            const mainFormPreview = document.getElementById('preview');
+            if (mainFormPreview) {
+                mainFormPreview.hidden = false;
+                mainFormPreview.textContent = `ICD Selection (iNo 1): ${selectedEntity.code}, ${selectedEntity.title}`;
+            }
 		}
-		else {
+        // This handles the primary search for the BOTTOM converter
+        else {
 			ECT.Handler.clear("2");
 			document.getElementById('icdCode2').value = `${selectedEntity.code} , ${selectedEntity.title}`;
-			submitButton2.disabled = false; // Enable submit button
-		}
+			submitButton2.disabled = false; // Enable convert button
+            
+            // NEW: Display selection in the main form's preview section
+            const mainFormPreview = document.getElementById('preview');
+            if (mainFormPreview) {
+                mainFormPreview.hidden = false;
+                mainFormPreview.textContent = `ICD Search Term (iNo 2): ${selectedEntity.code}, ${selectedEntity.title}`;
+            }
+        }
 	}
 };
 
@@ -170,11 +276,12 @@ const myCallbacks = {
 ECT.Handler.configure(mySettings, myCallbacks);
 
 
-
-
+// =================================================================
+// START: (ICD-to-NAMC) LOGIC
+// =================================================================
 
 // NOTE: For ICD to NAMC
-
+// (This function is just for logging, not essential for the button)
 function returnJson() {
 	const icdValue2 = document.getElementById("icdCode2").value;
 	const namcValue2 = document.getElementById("search-input2").value;
@@ -183,84 +290,122 @@ function returnJson() {
 
 	fetch("/api/returnJson", {
 		method: "POST",
-		headers: { 'Authorization': `Bearer ${token}`, "Content-Type": "application/json" },
+		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(payload2)
 	}).catch(error => console.error("Error:", error));
 }
 
-// script.js
+// Get the elements for the second converter
 const searchInput2 = document.getElementById('icdCode2');
 const suggestionsContainer2 = document.getElementById('suggestions2');
 const submitButton2 = document.getElementById('submit-button2');
 const resultInput2 = document.getElementById('search-input2');
 
-let isSuggestionSelected2 = false; // Track if a suggestion was selected
-let isResultSelected2 = false; // Track if a suggestion was selected
 
-
-//NOTE: Checks if any change is made to the NAMC Code search box
+//NOTE: Checks if any change is made to the ICD-11 Code search box
+// This listener enables the button *after* you select a WHO term
 searchInput2.addEventListener('input', async () => {
-	const query2 = searchInput.value.trim();
-	isSuggestionSelected2 = false; // Reset on new input
-	submitButton2.disabled = true; // Disable button until suggestion is selected
-
-	if (query2.length === 0) {
-		suggestionsContainer2.style.display = 'none';
-		return;
-	}
+	submitButton2.disabled = searchInput2.value.trim().length === 0;
 });
 
 
-
-
-//NOTE: Handle submit button click
+//NOTE: Handle (ICD-to-NAMC) submit button click
 submitButton2.addEventListener('click', async () => {
-	console.log("Inside the submit's event listener")
-
-	const selectedTerm = searchInput2.value.trim();
-	console.log(selectedTerm)
-	console.log("After displaying selectedTerm")
-	if (!selectedTerm) {
+	const fullSelectedTerm = searchInput2.value.trim(); // e.g., "MA00, Fever of unknown origin"
+    // Attempt to extract the ICD code from the selected term for the main form
+    const searchIcdCode = fullSelectedTerm.split(',')[0].trim();
+    
+	if (!fullSelectedTerm) {
 		return;
 	}
 
-	try {
+    // Set loading state
+    resultInput2.value = "Searching (Map & Fuzzy)...";
+    suggestionsContainer2.innerHTML = '';
+    suggestionsContainer2.style.display = 'none';
 
-		console.log("Inside the submit's event listener")
-		url = "/api/ICDtoNAMC?q=" + encodeURIComponent(selectedTerm)
-		const response = await fetch(url, { method: 'GET', headers: { 'Authorization': `Bearer ${token}` } });
+	try {
+		const url = "/api/ICDtoNAMC?q=" + encodeURIComponent(fullSelectedTerm)
+		const response = await fetch(url);
 		if (!response.ok) throw new Error(`Network response was not ok: ${response.status}`);
 
-		const suggestions = await response.json();
-		console.log(suggestions)
-
-		suggestionsContainer2.innerHTML = ''
+		const suggestions = await response.json(); // List of map or fuzzy results
+		
+        // NEW: Display results in the main form's preview section
+        const mainFormPreview = document.getElementById('preview');
+        if (mainFormPreview) {
+            mainFormPreview.hidden = false;
+            mainFormPreview.textContent = `ICD->NAMC Results (${suggestions.length} matches):\n` + JSON.stringify(suggestions, null, 2);
+        }
 
 		if (suggestions.length > 0) {
+            
+            resultInput2.value = "Found " + suggestions.length + " matches. Select below.";
+
+            // Check the score of the first result to see what kind of results they are
+            // Map results have score 101, fuzzy results have score < 100
+            let isMapResult = suggestions[0].score > 100;
+            let cssClass = isMapResult ? 'suggestion-item-map' : 'suggestion-item-fuzzy';
+            
+            if (!isMapResult) {
+                const header = document.createElement('div');
+                header.className = 'suggestions-header';
+                header.textContent = 'Fuzzy Matches';
+                suggestionsContainer2.appendChild(header);
+            }
+
 			suggestions.forEach(item => {
 				const div2 = document.createElement('div');
-				div2.className = 'suggestion-item';
-				div2.textContent = `${item.code}, ${item.term}`; // English term
+				div2.className = cssClass; // Apply map or fuzzy class
+				div2.textContent = `${item.code}, ${item.term} (Score: ${item.score.toFixed(0)})`; 
 				div2.addEventListener('click', () => {
 					resultInput2.value = `${item.code}, ${item.term}`;
 					suggestionsContainer2.style.display = 'none';
+                    
+                    // NEW: Push NAMC code to the main form's NAMC field
+                    const mainNamcInput = document.getElementById('namc');
+                    if (mainNamcInput) {
+                        mainNamcInput.value = item.code;
+                    }
+
+                    // NEW: Push ICD code to the main form's ICD field
+                    const mainIcdInput = document.getElementById('icd');
+                    if (mainIcdInput) {
+                        mainIcdInput.value = searchIcdCode;
+                    }
+                    
+                    // Update combined display in main form
+                    if (typeof updateCombined === 'function') updateCombined(); 
 				});
 				suggestionsContainer2.appendChild(div2);
 			});
 			suggestionsContainer2.style.display = 'block';
 		} else {
+			// No matches found in the map OR fuzzy search
+			resultInput2.value = 'No Map or Fuzzy matches found.';
 			suggestionsContainer2.style.display = 'none';
 		}
 
-
 	} catch (error) {
 		console.error('Error submitting term:', error);
+        resultInput2.value = "Error during search.";
+
+        // NEW: Display error in the main form's preview section
+        const mainFormPreview = document.getElementById('preview');
+        if (mainFormPreview) {
+            mainFormPreview.hidden = false;
+            mainFormPreview.textContent = `ERROR during ICD->NAMC conversion: ${error.message}`;
+        }
 	}
 });
+// =================================================================
+// END: (ICD-to-NAMC) LOGIC
+// =================================================================
+
 
 
 // ====================================================================
-// START: NLP CLINICAL NOTES SEARCH LOGIC (Works with the new main.py)
+// START: NLP CLINICAL NOTES SEARCH LOGIC
 // ====================================================================
 const nlpSearchButton = document.getElementById('nlp-search-button');
 const nlpSearchInput = document.getElementById('nlp-search-input');
@@ -296,7 +441,7 @@ async function handleNLPSearch() {
 	try {
 		const response = await fetch('/api/nlp_search', {
 			method: 'POST',
-			headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ query: query }),
 		});
 
@@ -306,6 +451,14 @@ async function handleNLPSearch() {
 		}
 
 		const results = await response.json();
+        
+        // NEW: Display results in the main form's preview section
+        const mainFormPreview = document.getElementById('preview');
+        if (mainFormPreview) {
+            mainFormPreview.hidden = false;
+            mainFormPreview.textContent = `NLP Search Results (${results.length} matches):\n` + JSON.stringify(results, null, 2);
+        }
+
 		displayNLPResults(results);
 
 	} catch (error) {
@@ -351,34 +504,42 @@ function displayNLPResults(results) {
 	}).join('');
 
 	window.handleNLPCardClick = function(code, display, system) {
-		console.log("Inside handleCardClickFunction");
-		searchInput.value = `${code},${system}: ${display}`;
+		// This function is now globally available
+		console.log("NLP Card clicked:", code, display, system);
+		
+		// Find the original full item from the suggestions to populate the input
+		const fullDisplay = `${system}: ${display}`;
+		
+		// We need to find the vernacular term to match the autocomplete format
+		// This is a bit of a hack, we'll just leave it empty
+		const fullTermString = `${code},${fullDisplay},`; 
+
+		searchInput.value = fullTermString;
+		
+		// Scroll to the top to see the converter
+		window.scrollTo(0, 0);
+
+		// Enable the convert button
+        isSuggestionSelected = true; 
+        submitButton.disabled = false;
+        
+        // NEW: Push the NAMC code to the main form's NAMC field
+        const mainNamcInput = document.getElementById('namc');
+        if (mainNamcInput) {
+            mainNamcInput.value = code;
+        }
+
+        // NEW: Clear the ICD field as NLP only gives a NAMC term/code
+        const mainIcdInput = document.getElementById('icd');
+        if (mainIcdInput) {
+            mainIcdInput.value = '';
+        }
+
+        if (typeof updateCombined === 'function') updateCombined(); 
 	}
 
 	nlpResultsArea.innerHTML = resultsHtml;
 }
-
-// NOTE: This is for uploading csv into the backend
-
-function uploadCSV() {
-	var input = document.getElementById("csv-file-input");
-	if (input.files.length == 0) {
-		alert("Please pass a file into the box!!");
-		return;
-	}
-
-	var data = new FormData();
-	data.append("csv_file", input.files[0]);
-	data.append("hfr_id",)
-
-	fetch('/csvUpload', { 'Authorization': `Bearer ${token}`, method: "POST", body: data });
-
-}
-
-
-
-// ===================================
+// =V==================================
 // END: NLP CLINICAL NOTES SEARCH LOGIC
 // ===================================
-
-
