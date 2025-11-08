@@ -214,6 +214,141 @@ def swagger_spec():
 def home():
     return render_template("index2.html")
 
+
+@app.route('/register', methods=['POST'])
+def register_patient():
+    """
+    Register a patient with ABHA number
+    
+    curl -X POST http://localhost:5000/register \
+      -H "Content-Type: application/json" \
+      -d '{"abha": "12345678901234", "name": "John Doe"}'
+    """
+    data = request.get_json()
+    abha = data['abha']
+    name = data['name']
+    
+    # Store patient
+    patients_db[abha] = {
+        'abha': abha,
+        'name': name,
+        'consent': False  # Not consented yet
+    }
+    
+    return jsonify({
+        'message': 'Patient registered',
+        'abha': abha,
+        'name': name
+    }), 201
+
+
+@app.route('/consent', methods=['POST'])
+def give_consent():
+    """
+    Patient gives consent to share data
+    
+    curl -X POST http://localhost:5000/consent \
+      -H "Content-Type: application/json" \
+      -d '{"abha": "12345678901234"}'
+    """
+    data = request.get_json()
+    abha = data['abha']
+    
+    if abha not in patients_db:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    # Activate consent
+    patients_db[abha]['consent'] = True
+    
+    return jsonify({
+        'message': 'Consent given',
+        'abha': abha,
+        'consent_status': 'ACTIVE'
+    }), 200
+
+
+@app.route('/save-diagnosis', methods=['POST'])
+def save_diagnosis():
+    """
+    Save patient diagnosis with NAMC and ICD-11 codes
+    
+    curl -X POST http://localhost:5000/save-diagnosis \
+      -H "Content-Type: application/json" \
+      -d '{
+        "abha": "12345678901234",
+        "diagnosis": "Jaundice",
+        "namc_code": "ABB1.1",
+        "icd_code": "ME20.1"
+      }'
+    """
+    data = request.get_json()
+    abha = data['abha']
+    
+    # Check if patient exists and has consent
+    if abha not in patients_db:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    if not patients_db[abha]['consent']:
+        return jsonify({'error': 'No consent given'}), 403
+    
+    # Save record
+    record = {
+        'diagnosis': data['diagnosis'],
+        'namc_code': data['namc_code'],
+        'icd_code': data['icd_code'],
+        'date': datetime.now().isoformat()
+    }
+    
+    if abha not in records_db:
+        records_db[abha] = []
+    
+    records_db[abha].append(record)
+    
+    return jsonify({
+        'message': 'Diagnosis saved',
+        'namc': data['namc_code'],
+        'icd': data['icd_code']
+    }), 201
+
+
+@app.route('/get-health-data', methods=['GET'])
+def get_health_data():
+    """
+    Retrieve patient health data
+    
+    curl -X GET "http://localhost:5000/get-health-data?abha=12345678901234"
+    """
+    abha = request.args.get('abha')
+    
+    # Check if patient exists and has consent
+    if abha not in patients_db:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    if not patients_db[abha]['consent']:
+        return jsonify({'error': 'No consent'}), 403
+    
+    # Get records
+    records = records_db.get(abha, [])
+    
+    # Build simple FHIR-like response
+    response = {
+        'patient': {
+            'id': abha,
+            'name': patients_db[abha]['name']
+        },
+        'diagnoses': records,
+        'total_records': len(records)
+    }
+    
+    return jsonify(response), 200
+
+
+@app.route('/patients', methods=['GET'])
+def get_all_patients():
+    """Just for debugging"""
+    return jsonify(patients_db), 200
+
+
 # --- New LangChain NLP Search Endpoint ---
 @app.route("/api/nlp_search", methods=["POST"])
 def nlp_search():

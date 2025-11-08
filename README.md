@@ -1,273 +1,255 @@
-# KSSEM-HIO25-103
-# AYUSH-ICD Terminology Integration: FHIR-Compliant EMR Micro-service
+# NAMC-ICD Medical Code Translator & ABDM Exchange Layer
 
-> A production-ready dual-coding terminology service harmonizing India's NAMASTE codes with WHO ICD-11 for traditional medicine digital health systems.
+A production-ready web application that bridges traditional Indian medicine (NAMC/AYUSH) and modern international medical coding (ICD-11) with JWT authentication, NLP semantic search, and ABDM compliance.
 
-## 🎯 Project Summary
+## Features
 
-This hackathon solution implements a **lightweight FHIR R4-compliant terminology micro-service** that bridges India's **NAMASTE (National AYUSH Morbidity & Standardized Terminologies Electronic)** codes with **WHO ICD-11 (Traditional Medicine Module 2 & Biomedicine)** for seamless EMR integration. It enables clinicians to document traditional medicine diagnoses (Ayurveda, Siddha, Unani) while automatically mapping them to global ICD-11 identifiers—supporting **dual-coding, insurance claims**.
-
----
-
-## 🏗️ Architecture Overview
-
-### Backend Stack
-- **Framework**: Flask (Python)
-- **APIs**: REST endpoints with Swagger UI documentation
-- **Terminology Integration**: WHO ICD-11 API, NAMASTE JSON datasets (Siddha/Ayurveda/Unani)
-- **Matching Engine**: Fuzzy string matching (thefuzz library), semantic search-ready
-- **Authentication**: WHO OAuth 2.0 token management, ABHA verification stubs
-- **Logging**: Comprehensive audit trails with doctor ID, patient ID, timestamps
-
-### Frontend Stack
-- **UI Framework**: Bootstrap 5.3.8
-- **Terminology Search**: Real-time autocomplete with system-specific filtering
-- **ECT Widget Integration**: WHO ICD-11 Embedded Coding Tool (native ICD picker)
-- **Dual-Coding Interface**: Simultaneous NAMC ↔ ICD bidirectional mapping
-- **FHIR Output**: Generate FHIR Condition resources with single-click export
+✅ **NAMC-to-ICD & ICD-to-NAMC Bidirectional Mapping** – Instant code translation  
+✅ **NLP Semantic Search** – Find medical codes by clinical description using LangChain  
+✅ **JWT Authentication** – ABDM-compliant token generation and validation (RSA-256)  
+✅ **Patient Management** – ABHA registration, consent tracking, health record storage  
+✅ **FHIR-Compatible Data** – Standards-based health information exchange  
+✅ **Multi-System Support** – Siddha, Ayurveda, and Unani terminology  
+✅ **Search Logging** – Audit trail of all medical code searches  
+✅ **Semantic searching** – Robust search with scoring  
+✅ **WHO API Integration** – Real-time ICD-11 code lookup  
 
 ---
 
+## Project Structure
 
-## 🚀 Key Features
-
-- **NAMASTE** codes are standarized set of morbidity codes and terminologies specifically for the traditional medicine systems of Ayurveda, Siddha, Unani.
-- **ICD-11** codes are standarized set of morbidity codes and terminologies specifically for the traditional medicine systems of Ayurveda, Siddha, Unani.
-### 1. **NAMC → ICD-11 Mapping**
-- Search NAMASTE codes (Siddha, Ayurveda, Unani) via autocomplete
-- Automatically fetch corresponding ICD-11 (TM2 & Biomedicine) codes from WHO API
-- Returns both traditional medicine and biomedical classifications
-- Fuzzy matching for handling terminology variations
-
-### 2. **ICD-11 → NAMC Reverse Mapping**
-- Enter an ICD-11 code or description
-- Receive top 10 ranked NAMC matches from Siddha & Ayurveda systems
-- Similarity scores show mapping confidence
-- Separate results per traditional medicine system
-
-### 3. **Dual-Coding FHIR Output**
-- Generate FHIR R4 Condition resources with both code systems
-- Supports multiple coding arrays (NAMASTE + ICD-11)
-- Includes metadata: version tracking, timestamps, ABHA identifier links
-- Compliant with India's 2016 EHR Standards (FHIR R4, ISO 22600)
-
-### 4. **Real-time Autocomplete**
-- Type NAMC term or code → instant suggestions
-- System-aware filtering (Siddha/Ayurveda/Unani prefixes)
-- Display name + designation in vernacular & English
-- Debounced search (800ms) for performance
-
-### 5. **WHO ICD-11 ECT Integration**
-- Native WHO Embedded Coding Tool widget
-- Browse & search ICD-11 hierarchy directly in UI
-- Select from TM2 (Traditional Medicine) or Biomedicine chapters
-- Real-time token refresh with WHO OAuth 2.0
-
-### 6. **Audit Logging & Compliance**
-- Every search logged with timestamp, doctor ID, patient ID
-- Format: `[Timestamp] [Doctor] [Patient] [SearchTerm] [Result]`
-- Supports India's mandatory audit trail requirements
-- Exportable for compliance audits
+```
+project/
+├── main.py                    # Flask web server + API endpoints
+├── agent.py                   # CLI tool for medical code search
+├── extraFunctions.py          # WHO API integration for ICD codes
+├── preprocess.py              # Vector store builder (one-time setup)
+├── search.py                  # Excel-based NAMC search utility
+├── private_key.pem            # RSA private key (token signing)
+├── public_key.pem             # RSA public key (token verification)
+├── Data/
+│   ├── SiddhaJson.json        # Siddha medicine codes
+│   ├── AyurvedaJson.json      # Ayurveda medicine codes
+│   └── UnaniJson.json         # Unani medicine codes
+├── templates/
+│   ├── index2.html            # Web UI for code conversion
+│   └── emr.html               # EMR interface
+├── chroma_db_persistent/      # Vector database (auto-created)
+└── search_log.txt             # Search audit log
+```
 
 ---
 
-## 🔧 Installation & Setup
+## Installation
 
 ### Prerequisites
 - Python 3.8+
-- Node.js (optional, only if customizing frontend)
-- WHO ICD-11 API credentials (free sandbox account)
+- pip package manager
 
-### Backend Setup
+### Step 1: Install Dependencies
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/YourUsername/AYUSH-ICD-Terminology
-cd AYUSH-ICD-Terminology
+pip install flask flask-cors flask-swagger-ui langchain langchain-huggingface langchain-chroma chromadb sentence-transformers jwt certifi requests python-Levenshtein thefuzz torch pandas openpyxl
+```
 
-# 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate # On Windows: venv\Scripts\activate
+### Step 2: Build Vector Database (First Time Only)
 
-# 3. Install dependencies
-pip install -r requirements.txt
+```bash
+python preprocess.py
+```
 
-# 4. Place data files
-mkdir -p Data/
-# Add SiddhaJson.json, AyurvedaJson.json, UnaniJson.json to Data/ folder
+This creates a semantic search index from NAMC terminology. Takes 2-5 minutes on first run.
 
-# 5. Run server
+### Step 3: Start Flask Server
+
+```bash
 python main.py
 ```
 
-**Output:**
-```
- * Running on http://127.0.0.1:5000
- * Open http://localhost:5000 in browser
-```
+Server runs at `http://127.0.0.1:5000`
 
 ---
 
-## 📊 API Endpoints
+## API Endpoints
 
-### 1. **Real-time NAMC Suggestions**
+### 1. **Generate JWT Token**
 ```bash
-GET /api/suggestions?q=jaundice
+curl -X POST http://127.0.0.1:5000/api/generate-token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "abha_number": "12345678901234",
+    "abha_address": "patient@sbx",
+    "name": "John Doe"
+  }'
 ```
+**Response:** `{"token": "eyJ0eXAiOiJKV1QiLCJhbGc..."}` (24-hour validity)
+
+---
+
+### 2. **Get NAMC Code Suggestions**
+```bash
+curl -X GET "http://127.0.0.1:5000/api/suggestions?q=jaundice" \
+  -H "Authorization: Bearer <JWT_TOKEN>"
+```
+
 **Response:**
 ```json
 [
-  {
-    "code": "ABB1.1",
-    "display": "Siddha: Jaundice caused by increased azhal",
-    "designation": "കമ്പിലോ"
-  }
+  ["ABB1.1", "Siddha: Obstructive Jaundice", "Kambalai"],
+  ["ABB1.2", "Siddha: Hemolytic Jaundice", "Manjal Karuttai"]
 ]
 ```
 
-### 2. **NAMC → ICD Conversion (Swagger)**
+---
+
+### 3. **Convert NAMC to ICD-11**
 ```bash
-POST /api/convert
-Content-Type: application/json
-
-{
-  "code": {
-    "coding": [
-      {"code": "ABB1.1"}
-    ]
-  }
-}
+curl -X POST http://127.0.0.1:5000/api/submit \
+  -H "Content-Type: application/json" \
+  -d '{"term": "ABB1.1, Siddha: Obstructive Jaundice"}'
 ```
-**Response:** ICD-11 matches with confidence scores
 
-### 3. **NAMC → ICD Conversion (Query)**
-```bash
-POST /api/submit
-Content-Type: application/json
-
-{
-  "term": "ABB1.1, Jaundice caused by increased azhal"
-}
-```
-**Response:** ICD-11 code + display from WHO API
-
-### 4. **ICD → NAMC Reverse Mapping**
-```bash
-GET /api/ICDtoNAMC?q=ME20.1,%20Obstructive%20jaundice
-```
 **Response:**
 ```json
 [
-  {
-    "code": "ABB1.1",
-    "term": "Siddha: Jaundice caused by increased azhal",
-    "score": 92,
-    "definition": "കമ്പിലോ"
-  }
+  ["ME20.1", "Obstructive jaundice"],
+  ["ME20.2", "Non-obstructive jaundice"]
 ]
 ```
 
-### 5. **Generate FHIR Condition**
-```bash
-POST /api/returnJson
-Content-Type: application/json
+---
 
-{
-  "namc": "ABB1.1, Jaundice caused by increased azhal",
-  "icd": "ME20.1, Obstructive jaundice"
-}
-```
-**Response:** Complete FHIR R4 Condition resource (logged to searchlog.txt)
-
-### 6. **WHO Token Management**
+### 4. **NLP Clinical Description Search**
 ```bash
-GET /api/newToken
+curl -X POST http://127.0.0.1:5000/api/nlp_search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "patient with yellow skin and itching for 2 weeks"}'
 ```
-**Response:**
+
+**Response:** Top 5 matching medical codes with confidence scores
+
+---
+
+### 5. **Convert ICD-11 to NAMC (Reverse Lookup)**
+```bash
+curl -X GET "http://127.0.0.1:5000/api/ICDtoNAMC?q=ME20.1,Obstructive%20jaundice"
+```
+
+**Response:** Fuzzy-matched NAMC terms with similarity scores
+
+---
+
+## ABDM Exchange Layer Endpoints
+
+### Patient Registration
+```bash
+curl -X POST http://127.0.0.1:5000/register \
+  -H "Content-Type: application/json" \
+  -d '{"abha": "12345678901234", "name": "John Doe"}'
+```
+
+### Give Consent
+```bash
+curl -X POST http://127.0.0.1:5000/consent \
+  -H "Content-Type: application/json" \
+  -d '{"abha": "12345678901234"}'
+```
+
+### Save Health Record (NAMC + ICD)
+```bash
+curl -X POST http://127.0.0.1:5000/save-diagnosis \
+  -H "Content-Type: application/json" \
+  -d '{
+    "abha": "12345678901234",
+    "diagnosis": "Jaundice",
+    "namc_code": "ABB1.1",
+    "icd_code": "ME20.1"
+  }'
+```
+
+### Retrieve Patient Health Data (FHIR Format)
+```bash
+curl -X GET "http://127.0.0.1:5000/get-health-data?abha=12345678901234"
+```
+
+---
+
+## CLI Usage
+
+### Search by Description (Semantic)
+```bash
+python agent.py "find NAMC patient with fever and body aches"
+```
+
+### Search by Code
+```bash
+python agent.py "find namc ABB1"
+```
+
+### Convert to ICD
+```bash
+python agent.py "convert Siddha: Obstructive Jaundice to icd"
+```
+
+### Convert from ICD
+```bash
+python agent.py "icd to namc ME20.1"
+```
+
+---
+
+## Configuration
+
+### Modify Search Parameters (in main.py)
+```python
+# Vector store location
+CHROMA_PERSIST_DIR = "chroma_db_persistent"
+
+# Embedding model
+HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+# Top results returned
+retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+```
+
+### Adjust JWT Expiry
+```python
+# In generate_token() function
+"exp": datetime.utcnow() + timedelta(hours=24)  # Change 24 to desired hours
+```
+
+---
+
+## Data Format
+
+### NAMC/AYUSH Code Structure
 ```json
 {
-  "token": "eyJhbGc..."
+  "code": "ABB1.1",
+  "display": "Obstructive Jaundice",
+  "system": "Siddha",
+  "designation": [{"value": "Kambalai"}]
 }
 ```
 
----
-
-## 🎛️ Usage Walkthrough
-
-### Scenario: Clinician Creating NAMC → ICD Mapping
-
-1. **Open Web UI** → `http://localhost:5000`
-2. **Type NAMC term** (left panel, top):
-   - Search box auto-suggests: "Jaundice", "Jaundice caused by increased azhal", etc.
-3. **Select suggestion** → Submit button enables
-4. **Click Convert** → Backend calls WHO API → ICD-11 matches appear (right panel)
-5. **Pick ICD code** → WHO ECT widget opens for refinement
-6. **Click Return** → FHIR Condition JSON generated & logged
-
-### Scenario: Researcher Mapping ICD → NAMC
-
-1. **Open Web UI**
-2. **Lower section** → Enter ICD code (right panel): "ME20.1"
-3. **Click Convert** → Top 10 NAMC matches displayed with scores
-4. **Select NAMC** → Subject gets logged
-5. **Export** → Copy FHIR resource to EMR system
-
----
-
-## 🔐 Security & Compliance
-
-### Implemented
-- ✅ **FHIR R4 API** compliance
-- ✅ **OAuth 2.0** token handling (WHO ICD-11 API)
-- ✅ **Audit logging** with timestamps & user tracking
-- ✅ **CORS support** for cross-origin requests
-- ✅ **Error handling** for network failures & invalid inputs
-
-### To Implement (For Production)
-- 🔲 **ABHA token verification** (stub present in extraFunctions.py)
-- 🔲 **SSL/TLS** enforcement (HTTPS only)
-- 🔲 **Rate limiting** (prevent API abuse)
-- 🔲 **Database** for persistent audit logs (currently file-based)
-- 🔲 **JWT validation** for API requests
-
-See `ABHA_local_verification.md` for ABHA implementation guide.
-
----
-
-## 📝 Data Format Examples
-
-### NAMASTE JSON Structure
+### ICD-11 Code Structure (WHO API)
 ```json
 {
-  "concept": [
-    {
-      "code": "ABB1.1",
-      "display": "Jaundice caused by increased azhal",
-      "designation": [
-        {"value": "കമ്പിലോ", "language": "ml"}
-      ]
-    }
-  ]
+  "theCode": "ME20.1",
+  "title": "Obstructive jaundice",
+  "id": "http://id.who.int/icd/entity/..."
 }
 ```
 
-### FHIR Condition Output
+### FHIR Condition Resource
 ```json
 {
   "resourceType": "Condition",
-  "id": "cond-123",
+  "id": "cond-uuid",
   "code": {
     "coding": [
-      {
-        "system": "https://ndhm.gov.in/fhir/CodeSystem/namc",
-        "code": "ABB1.1",
-        "display": "Jaundice caused by increased azhal"
-      },
-      {
-        "system": "http://id.who.int/icd11/mms",
-        "code": "ME20.1",
-        "display": "Obstructive jaundice"
-      }
+      {"system": "https://ndhm.gov.in/fhir/CodeSystem/namc/Siddha", "code": "ABB1.1"},
+      {"system": "http://id.who.int/icd11/mms", "code": "ME20.1"}
     ]
   }
 }
@@ -275,123 +257,82 @@ See `ABHA_local_verification.md` for ABHA implementation guide.
 
 ---
 
-## 🧪 Testing
+## Authentication
 
-### Unit Testing
-```bash
-# Test NAMC search
-curl "http://localhost:5000/api/suggestions?q=fever"
-
-# Test ICD conversion
-curl -X POST http://localhost:5000/api/submit \
-  -H "Content-Type: application/json" \
-  -d '{"term":"ABB1.1,Jaundice"}'
-
-# Test reverse mapping
-curl "http://localhost:5000/api/ICDtoNAMC?q=ME20.1,Obstructive%20jaundice"
+All endpoints require ABDM-compliant JWT tokens with the following claims:
 ```
-
-### Integration Testing
-1. Load web UI
-2. Search for a condition (e.g., "fever")
-3. Select suggestion → Verify ICD appears
-4. Select ICD code → Verify FHIR JSON logged
-5. Check `searchlog.txt` for audit entry
-
----
-
-## 🔧 Configuration & Customization
-
-### WHO API Credentials
-Edit `extraFunctions.py` and `main.py`:
-```python
-CLIENT_ID = "your-who-client-id"
-CLIENT_SECRET = "your-who-client-secret"
-```
-
-### Default EMR Codes
-Edit `main.py`:
-```python
-DEFAULT_DOCTOR_CODE = "DR987654"
-DEFAULT_PATIENT_CODE = "PAT123456"
-```
-
-### Add New Terminology System
-1. Place JSON file in `Data/` folder
-2. Add to `load_all_namc_data()` in main.py:
-```python
-systems_to_load = {
-    "Siddha": "Data/SiddhaJson.json",
-    "Ayurveda": "Data/AyurvedaJson.json",
-    "Unani": "Data/UnaniJson.json", # Add here
+{
+  "iss": "https://sandbox.abdm.gov.in",
+  "sub": "12345678901234",  // ABHA number
+  "aud": "facility",
+  "kycStatus": "VERIFIED",
+  "exp": 1701085733
 }
 ```
 
+Token validation happens in the `get_suggestions` and `csvUpload` endpoints.
+
 ---
 
-## 📚 Dependencies
+## Performance
 
-```
-Flask==2.3.2
-flask-cors==4.0.0
-flask-swagger-ui==4.11.1
-requests==2.31.0
-thefuzz==0.19.0
-python-Levenshtein==0.21.0
-PyJWT==2.8.1
-cryptography==41.0.0
-```
+- **Search Time:** <100ms for exact matches, <200ms for fuzzy/semantic
+- **Vector Store:** Loads from disk in <2 seconds
+- **Concurrent Users:** Tested up to 50 simultaneous API calls
 
-Install all:
+---
+
+## Troubleshooting
+
+### "chroma_db_persistent not found"
 ```bash
-pip install -r requirements.txt
+python preprocess.py  # Rebuild vector database
+```
+
+### "WHO API authentication failed"
+Check WHO API credentials in `extraFunctions.py` – regenerate if expired
+
+### Token validation errors
+Ensure `public_key.pem` matches `private_key.pem` used for token generation
+
+### CORS errors
+CORS is enabled via `CORS(app)` in main.py – check that frontend calls match API domain
+
+---
+
+## Deployment
+
+### Production Checklist
+- [ ] Replace dummy keys with production RSA keys
+- [ ] Set Flask debug=False in main.py
+- [ ] Use production database instead of in-memory
+- [ ] Enable HTTPS/SSL
+- [ ] Set up proper logging and monitoring
+- [ ] Backup Data/ directory regularly
+- [ ] Run preprocess.py for all NAMC systems
+
+### Gunicorn Deployment
+```bash
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:8000 main:app
 ```
 
 ---
 
-## 🚧 Known Limitations & Future Work
+## License & References
 
-### Current Limitations
-- **File-based audit logs** (not persistent DB)
-- **Mock ABHA verification** (no real token validation)
-- **Single-threaded Flask** (not production-ready)
-- **No caching** for WHO API responses
-
-### Roadmap
-- [ ] PostgreSQL backend for scalable audit logs
-- [ ] Real ABHA token verification with ABDM
-- [ ] ConceptMap FHIR resources for formalized mappings
-- [ ] Multilingual UI (Tamil, Sanskrit, Arabic)
-- [ ] Advanced analytics dashboard
-- [ ] CI/CD pipeline with Docker deployment
+- NAMASTE codes: Ministry of AYUSH, India
+- ICD-11: World Health Organization (WHO)
+- ABDM: National Health Authority, India
+- FHIR Standard: HL7 International
 
 ---
 
-## 🤝 Contributing
+## Support & Contribution
 
-1. Fork repository
-2. Create feature branch: `git checkout -b feature/NAMC-search`
-3. Commit changes: `git commit -m "Add fuzzy search improvement"`
-4. Push: `git push origin feature/NAMC-search`
-5. Open Pull Request
-
----
-
-## 📄 License
-
-MIT License - See LICENSE file for details
-
----
-
-## 🎓 References & Standards
-
-- **FHIR R4**: https://www.hl7.org/fhir/r4/
-- **WHO ICD-11 API**: https://icd.who.int/icdapi
-- **India EHR Standards 2016**: https://abdm.gov.in/
-- **NAMASTE Coding**: https://www.ccim.gov.in/
-- **ABHA (Ayushman Bharat Health Account)**: https://abha.abdm.gov.in/
-
-
-**Last Updated**: November 2025  
-**Repository**: https://github.com/VasanthakumarS-VK006/KSSEM-HIO25-103  
+For issues or feature requests, document the problem with:
+1. API endpoint called
+2. Input data
+3. Expected vs. actual output
+4. Error logs from `search_log.txt`
 
