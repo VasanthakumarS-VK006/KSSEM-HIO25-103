@@ -1,18 +1,19 @@
+
 # NAMC-ICD Medical Code Translator & ABDM Exchange Layer
 
 A production-ready web application that bridges traditional Indian medicine (NAMC/AYUSH) and modern international medical coding (ICD-11) with JWT authentication, NLP semantic search, and ABDM compliance.
 
 ## Features
 
-- **NAMC-to-ICD & ICD-to-NAMC Bidirectional Mapping** – Instant code translation  
-- **NLP Semantic Search** – Find medical codes by clinical description using LangChain  
-- **JWT Authentication** – ABDM-compliant token generation and validation (RSA-256)  
-- **Patient Management** – ABHA registration, consent tracking, health record storage  
-- **FHIR-Compatible Data** – Standards-based health information exchange  
-- **Multi-System Support** – Siddha, Ayurveda, and Unani terminology  
-- **Search Logging** – Audit trail of all medical code searches  
-- **Semantic searching** – Robust search with scoring  
-- **WHO API Integration** – Real-time ICD-11 code lookup  
+✅ **NAMC-to-ICD & ICD-to-NAMC Bidirectional Mapping** – Instant code translation  
+✅ **NLP Semantic Search** – Find medical codes by clinical description using LangChain  
+✅ **JWT Authentication** – ABDM-compliant token generation and validation (RSA-256)  
+✅ **Patient Management** – ABHA registration, consent tracking, health record storage  
+✅ **FHIR-Compatible Data** – Standards-based health information exchange  
+✅ **Multi-System Support** – Siddha, Ayurveda, and Unani terminology  
+✅ **Search Logging** – Audit trail of all medical code searches  
+✅ **Fuzzy & Exact Matching** – Robust search with scoring  
+✅ **WHO API Integration** – Real-time ICD-11 code lookup  
 
 ---
 
@@ -300,5 +301,38 @@ CORS is enabled via `CORS(app)` in main.py – check that frontend calls match A
 
 ---
 
+## Deployment
 
+### Production Checklist
+- [ ] Replace dummy keys with production RSA keys
+- [ ] Set Flask debug=False in main.py
+- [ ] Use production database instead of in-memory
+- [ ] Enable HTTPS/SSL
+- [ ] Set up proper logging and monitoring
+- [ ] Backup Data/ directory regularly
+- [ ] Run preprocess.py for all NAMC systems
 
+### Gunicorn Deployment
+```bash
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:8000 main:app
+```
+
+---
+
+## License & References
+
+- NAMASTE codes: Ministry of AYUSH, India
+- ICD-11: World Health Organization (WHO)
+- ABDM: National Health Authority, India
+- FHIR Standard: HL7 International
+
+---
+
+## Support & Contribution
+
+For issues or feature requests, document the problem with:
+1. API endpoint called
+2. Input data
+3. Expected vs. actual output
+4. Error logs from `search_log.txt`
