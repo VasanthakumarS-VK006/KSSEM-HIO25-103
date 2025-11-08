@@ -14,6 +14,7 @@ A production-ready web application that bridges traditional Indian medicine (NAM
 ✅ **Search Logging** – Audit trail of all medical code searches  
 ✅ **Fuzzy & Exact Matching** – Robust search with scoring  
 ✅ **WHO API Integration** – Real-time ICD-11 code lookup  
+✅  Uses **EasyOCR**, a lightweight, high-accuracy OCR engine, to extract textual information.
 
 ---
 
